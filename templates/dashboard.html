@@ -1,92 +1,476 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Taskflow – Overview</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-<script src="https://accounts.google.com/gsi/client" async defer></script></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taskflow Pro — Productivity Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
 <body data-page="dashboard" data-google="{{ google_client_id }}">
-<div class="shell" data-active-view="overview">
-  <aside class="sidebar">
-    <div class="logo"><svg viewBox="0 0 24 24" width="24" height="24" fill="#2E7D32"><path d="M20 4C9 4 4 9 4 16c0 1.6.4 3 1 4 1-4 4-8 9-10-4 3-6 6-7 11 1 .6 2 1 3 1 8 0 10-8 10-18z"/></svg><span>Taskflow</span></div>
-    <nav aria-label="Dashboard">
-      <a class="active" href="#overview" data-target="overview" aria-current="page">Overview</a>
-      <a href="#my-tasks" data-target="my-tasks">My Tasks</a>
-      <a href="#calendar" data-target="calendar">Calendar</a>
-      <a href="#categories" data-target="categories">Categories</a>
-      <a href="#team" data-target="team">Team</a>
-      <a href="#settings" data-target="settings">Settings</a>
+<div class="shell" id="app-shell" data-active-view="overview">
+
+  <!-- COLLAPSIBLE SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="#2E7D32"><path d="M20 4C9 4 4 9 4 16c0 1.6.4 3 1 4 1-4 4-8 9-10-4 3-6 6-7 11 1 .6 2 1 3 1 8 0 10-8 10-18z"/></svg>
+        <span class="logo-text">Taskflow <b class="pro-badge">PRO</b></span>
+      </div>
+      <button class="icon-btn-ghost side-toggle" id="sidebar-toggle" aria-label="Toggle sidebar" title="Toggle sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+
+    <nav aria-label="Main Navigation">
+      <div class="nav-group-label">Productivity</div>
+      <a class="active" href="#overview" data-target="overview" aria-current="page">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Overview</span>
+      </a>
+      <a href="#my-tasks" data-target="my-tasks">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>My Tasks</span>
+        <span class="badge" id="badge-total">0</span>
+      </a>
+      <a href="#today" data-target="today">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Today</span>
+        <span class="badge warn" id="badge-today">0</span>
+      </a>
+      <a href="#upcoming" data-target="upcoming">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Upcoming</span>
+      </a>
+      <a href="#starred" data-target="starred">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Important / Starred</span>
+        <span class="badge gold" id="badge-starred">0</span>
+      </a>
+      <a href="#completed" data-target="completed">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span>Completed</span>
+      </a>
+
+      <div class="nav-group-label">Workspace</div>
+      <a href="#categories" data-target="categories">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        <span>Categories</span>
+      </a>
+      <a href="#calendar" data-target="calendar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+        <span>Calendar</span>
+      </a>
+      <a href="#activity" data-target="activity">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+        <span>Activity History</span>
+      </a>
+      <a href="#settings" data-target="settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>Settings</span>
+      </a>
+
+      <!-- ADMIN LINK (Conditionally Shown for Admins) -->
+      <a href="#admin" data-target="admin" id="nav-admin" class="nav-admin" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Admin Portal</span>
+        <span class="badge admin-pill">Admin</span>
+      </a>
     </nav>
-    <p class="foot">Small steps make big progress.</p>
+
+    <div class="sidebar-foot">
+      <button class="kbd-btn" id="btn-shortcuts" title="Keyboard Shortcuts (Press ?)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+        <span>Shortcuts</span>
+        <kbd>?</kbd>
+      </button>
+    </div>
   </aside>
 
-  <main class="main">
+  <!-- MAIN VIEWPORT -->
+  <main class="main" id="main-content">
     <header class="top">
-      <h2 id="greeting">Good morning</h2>
+      <div class="top-left">
+        <button class="mobile-menu-btn" id="mobile-toggle" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h2 id="greeting">Good morning</h2>
+          <div class="breadcrumbs" id="breadcrumbs"><span>Taskflow</span> <i>/</i> <b id="crumb-current">Overview</b></div>
+        </div>
+      </div>
+
       <div class="top-actions">
-        <div id="google-btn"></div>
-        <button class="icon-btn" aria-label="Notifications"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg><i class="dot"></i></button>
-        <button class="avatar" id="avatar" aria-label="Log out" title="Log out"></button>
+        <!-- THEME TOGGLE -->
+        <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme" title="Toggle theme">
+          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+
+        <button class="avatar" id="avatar" aria-label="Account details" title="View Profile & Settings"></button>
+        <button class="icon-btn logout-btn" id="btn-logout" aria-label="Log out" title="Log out">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
       </div>
     </header>
 
-    <section class="metrics" id="metrics" data-view="overview">
-      <article class="card metric"><span>Total Tasks</span><strong id="m-total">–</strong><small id="t-total"></small></article>
-      <article class="card metric"><span>In Progress</span><strong id="m-progress">–</strong><small id="t-progress"></small></article>
-      <article class="card metric"><span>Completed</span><strong id="m-completed">–</strong><small id="t-completed" class="up"></small></article>
-      <article class="card metric"><span>Overdue</span><strong id="m-overdue">–</strong><small id="t-overdue" class="down"></small></article>
+    <!-- METRICS CARDS -->
+    <section class="metrics" id="metrics" data-view="overview today upcoming my-tasks starred completed">
+      <article class="card metric"><div class="m-icon icon-total"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div><span>Total Tasks</span><strong id="m-total">0</strong><small id="t-total"></small></div></article>
+      <article class="card metric"><div class="m-icon icon-prog"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><span>In Progress</span><strong id="m-progress">0</strong><small id="t-progress"></small></div></article>
+      <article class="card metric"><div class="m-icon icon-comp"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div><span>Completed</span><strong id="m-completed">0</strong><small id="t-completed" class="up"></small></div></article>
+      <article class="card metric"><div class="m-icon icon-over"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div><span>Overdue</span><strong id="m-overdue">0</strong><small id="t-overdue" class="down"></small></div></article>
     </section>
 
-    <section class="card tasks" id="tasks" data-view="overview my-tasks">
-      <div class="filters">
-        <input id="f-search" type="search" placeholder="Search tasks" aria-label="Search tasks">
-        <select id="f-status" aria-label="Status"><option value="">All statuses</option><option value="in_progress">In Progress</option><option value="completed">Completed</option><option value="overdue">Overdue</option></select>
-        <select id="f-priority" aria-label="Priority"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
-        <select id="f-category" aria-label="Category"><option value="">All categories</option></select>
-        <select id="f-due" aria-label="Due date"><option value="">Any due date</option><option value="today">Due today</option><option value="week">Next 7 days</option></select>
-        <button class="btn primary" id="add-task">+ Add Task</button>
+    <!-- TASK MANAGEMENT WORKSPACE -->
+    <section class="card tasks-card" id="tasks-section" data-view="overview my-tasks today upcoming starred completed">
+      
+      <!-- QUICK ADD BAR -->
+      <form class="quick-add" id="quick-add-form">
+        <span class="quick-plus">+</span>
+        <input type="text" id="quick-title" placeholder="Add a new task quickly... (Press Enter to save)" required maxlength="200" autocomplete="off">
+        <select id="quick-priority" title="Quick Priority">
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+          <option value="Critical">Critical</option>
+          <option value="Low">Low</option>
+        </select>
+        <button type="submit" class="btn primary btn-sm">Add</button>
+      </form>
+
+      <!-- BULK ACTIONS TOOLBAR -->
+      <div class="bulk-bar" id="bulk-bar" hidden>
+        <label class="select-all-wrap"><input type="checkbox" id="chk-select-all"> Select all</label>
+        <span class="bulk-count" id="bulk-selected-count">0 selected</span>
+        <div class="bulk-actions">
+          <button type="button" class="btn btn-sm" id="btn-bulk-complete">Mark Completed</button>
+          <button type="button" class="btn btn-sm danger" id="btn-bulk-delete">Delete</button>
+          <button type="button" class="btn btn-sm ghost" id="btn-bulk-cancel">Cancel</button>
+        </div>
       </div>
-      <ul id="task-list" class="task-list"></ul>
+
+      <!-- FILTERS & CONTROLS -->
+      <div class="filters">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="f-search" type="search" placeholder="Search tasks or tags (Press / to focus)" aria-label="Search tasks">
+        </div>
+        <select id="f-status" aria-label="Status">
+          <option value="">All statuses</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="overdue">Overdue</option>
+        </select>
+        <select id="f-priority" aria-label="Priority">
+          <option value="">All priorities</option>
+          <option value="Critical">Critical</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        <select id="f-category" aria-label="Category">
+          <option value="">All categories</option>
+        </select>
+        <select id="f-due" aria-label="Due date">
+          <option value="">Any due date</option>
+          <option value="today">Due today</option>
+          <option value="week">Next 7 days</option>
+        </select>
+        <select id="f-sort" aria-label="Sort by">
+          <option value="">Sort: Smart</option>
+          <option value="due_date">Due date</option>
+          <option value="priority">Priority</option>
+          <option value="title">Title (A-Z)</option>
+          <option value="created_at">Recently created</option>
+        </select>
+
+        <div class="view-switchers">
+          <button class="view-btn active" id="btn-view-list" title="List View" aria-label="List View">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button class="view-btn" id="btn-view-grid" title="Grid/Cards View" aria-label="Grid View">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </button>
+        </div>
+
+        <button class="btn primary" id="add-task">+ Detailed Task</button>
+      </div>
+
+      <!-- ACTIVE FILTERS BAR -->
+      <div class="active-filters-bar" id="active-filters-bar" hidden>
+        <span class="active-label">Active filters:</span>
+        <div class="active-tags-list" id="active-tags-list"></div>
+        <button type="button" class="btn-link" id="btn-clear-filters">Clear all</button>
+      </div>
+
+      <!-- TASK LIST / GRID CONTAINER -->
+      <ul id="task-list" class="task-list view-list"></ul>
     </section>
 
+    <!-- CALENDAR PANEL -->
     <section class="card view-panel" id="calendar" data-view="calendar" hidden>
-      <div class="card-h"><h3 id="cal-title"></h3></div>
+      <div class="card-h">
+        <h3 id="cal-title">Calendar</h3>
+        <p class="card-sub">Inspect deadline schedule across the current month</p>
+      </div>
       <div id="mini-cal" class="cal"></div>
+      <div class="cal-inspector" id="cal-day-inspector">
+        <h4 id="cal-inspector-title">Select a day to inspect tasks</h4>
+        <ul class="task-list" id="cal-inspector-list"></ul>
+      </div>
     </section>
+
+    <!-- CATEGORIES / PROJECTS PANEL -->
     <section class="card view-panel" id="categories" data-view="categories" hidden>
-      <div class="card-h"><h3>Categories</h3></div>
-      <ul id="category-list" class="category-list"></ul>
+      <div class="card-h">
+        <h3>Categories & Projects</h3>
+        <p class="card-sub">Track workload and completion rates by functional area</p>
+      </div>
+      <div id="categories-grid" class="categories-grid"></div>
     </section>
-    <section class="card view-panel" id="team" data-view="team" hidden>
-      <div class="card-h"><h3>Team</h3></div>
-      <p class="view-note">Team collaboration is not available yet.</p>
+
+    <!-- ACTIVITY HISTORY / AUDIT TRAIL PANEL -->
+    <section class="card view-panel" id="activity" data-view="activity" hidden>
+      <div class="card-h flex-between">
+        <div>
+          <h3>Activity History & Audit Trail</h3>
+          <p class="card-sub">Recent actions, task updates, and completions</p>
+        </div>
+        <button class="btn ghost btn-sm" id="btn-clear-activity">Clear History</button>
+      </div>
+      <ul id="activity-list" class="activity-timeline"></ul>
     </section>
+
+    <!-- SETTINGS & PROFILE PANEL -->
     <section class="card view-panel" id="settings" data-view="settings" hidden>
-      <div class="card-h"><h3>Settings</h3></div>
-      <p class="view-note">There are no additional settings yet.</p>
+      <div class="card-h">
+        <h3>Profile & Settings</h3>
+        <p class="card-sub">Manage your account details and interface preferences</p>
+      </div>
+
+      <div class="settings-grid">
+        <div class="settings-card">
+          <h4>Profile Details</h4>
+          <form id="form-profile">
+            <label>Full Name<input type="text" id="prof-name" required maxlength="80"></label>
+            <label>Email Address<input type="email" id="prof-email" readonly disabled></label>
+            <label>Account Role<input type="text" id="prof-role" readonly disabled></label>
+            <button type="submit" class="btn primary">Update Profile</button>
+          </form>
+        </div>
+
+        <div class="settings-card">
+          <h4>Security & Password</h4>
+          <form id="form-password">
+            <label>Current Password<input type="password" id="pass-current" required minlength="8"></label>
+            <label>New Password<input type="password" id="pass-new" required minlength="8"></label>
+            <label>Confirm New Password<input type="password" id="pass-confirm" required minlength="8"></label>
+            <p id="pass-error" class="error"></p>
+            <button type="submit" class="btn primary">Change Password</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN DASHBOARD PANEL -->
+    <section class="card view-panel" id="admin" data-view="admin" hidden>
+      <div class="card-h">
+        <div class="flex-between">
+          <div>
+            <h3>System Admin Portal</h3>
+            <p class="card-sub">Overview of system users, task volume, and role permissions</p>
+          </div>
+          <span class="pill p-Critical">Admin Only</span>
+        </div>
+      </div>
+
+      <div class="metrics admin-metrics" id="admin-metrics">
+        <article class="card metric"><span>Total Users</span><strong id="adm-users">–</strong></article>
+        <article class="card metric"><span>System Tasks</span><strong id="adm-tasks">–</strong></article>
+        <article class="card metric"><span>Total Completed</span><strong id="adm-completed">–</strong></article>
+        <article class="card metric"><span>Completion Rate</span><strong id="adm-rate">–%</strong></article>
+      </div>
+
+      <div class="admin-table-wrap">
+        <h4>User Directory & Permission Management</h4>
+        <table class="admin-table" id="admin-user-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Tasks</th>
+              <th>Registered</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-user-tbody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
-  <aside class="right">
-    <section class="card" data-view="overview"><div class="card-h"><h3>Task Progress</h3></div>
-      <div class="donut-wrap"><svg id="donut" viewBox="0 0 120 120" width="150" height="150" role="img" aria-label="Task completion"></svg>
-        <ul class="legend"><li><i style="background:#2E7D32"></i>Completed <b id="l-c">0</b></li><li><i style="background:#F2B84B"></i>In Progress <b id="l-p">0</b></li><li><i style="background:#D9534F"></i>Overdue <b id="l-o">0</b></li></ul></div>
+  <!-- RIGHT ASIDE (OVERVIEW WIDGETS) -->
+  <aside class="right" id="right-aside">
+    <section class="card" data-view="overview">
+      <div class="card-h"><h3>Task Progress</h3></div>
+      <div class="donut-wrap">
+        <svg id="donut" viewBox="0 0 120 120" width="150" height="150" role="img" aria-label="Task completion"></svg>
+        <ul class="legend">
+          <li><i style="background:#2E7D32"></i>Completed <b id="l-c">0</b></li>
+          <li><i style="background:#F2B84B"></i>In Progress <b id="l-p">0</b></li>
+          <li><i style="background:#D9534F"></i>Overdue <b id="l-o">0</b></li>
+        </ul>
+      </div>
     </section>
-    <section class="card assistant" data-view="overview"><div class="card-h"><h3>AI Task Assistant</h3></div><ul id="suggestions"></ul></section>
+
+    <section class="card assistant" data-view="overview">
+      <div class="card-h">
+        <div class="ai-badge-row">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#2E7D32"><path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9L12 2Z"/></svg>
+          <h3>AI Productivity Assistant</h3>
+        </div>
+      </div>
+      <ul id="suggestions"></ul>
+    </section>
+
+    <section class="card mini-activity-preview" data-view="overview">
+      <div class="card-h flex-between">
+        <h3>Recent Activity</h3>
+        <a href="#activity" class="btn-link" data-target="activity">View all</a>
+      </div>
+      <ul id="mini-activity-list" class="mini-activity-list"></ul>
+    </section>
   </aside>
 </div>
 
-<dialog id="task-dialog"><form method="dialog" id="task-form" novalidate>
-  <h3 id="dlg-title">Add task</h3>
-  <label>Title<input name="title" required maxlength="200"></label>
-  <label>Description<textarea name="description" rows="3"></textarea></label>
-  <div class="row">
-    <label>Priority<select name="priority"><option>High</option><option selected>Medium</option><option>Low</option></select></label>
-    <label>Category<input name="category" list="cats" value="Work"><datalist id="cats"><option>Work</option><option>Development</option><option>Personal</option></datalist></label>
-    <label>Due date<input name="due_date" type="date"></label>
+<!-- ADD / EDIT TASK DIALOG -->
+<dialog id="task-dialog">
+  <form method="dialog" id="task-form" novalidate>
+    <div class="dialog-h">
+      <h3 id="dlg-title">Add task</h3>
+      <button type="button" class="btn-close" id="dlg-close" aria-label="Close">✕</button>
+    </div>
+    
+    <label>Title *
+      <input name="title" required maxlength="200" placeholder="e.g. Finalize quarterly report">
+    </label>
+    
+    <label>Description
+      <textarea name="description" rows="3" placeholder="Provide extra context, requirements, or checklist items..."></textarea>
+    </label>
+    
+    <div class="row">
+      <label>Priority
+        <select name="priority">
+          <option value="Critical">Critical</option>
+          <option value="High">High</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </label>
+      
+      <label>Category / Project
+        <input name="category" list="cats" value="Work" placeholder="e.g. Work, Personal">
+        <datalist id="cats">
+          <option>Work</option>
+          <option>Development</option>
+          <option>Personal</option>
+          <option>Design</option>
+          <option>Study</option>
+        </datalist>
+      </label>
+
+      <label>Due date
+        <input name="due_date" type="date">
+      </label>
+    </div>
+
+    <div class="row">
+      <label>Due Time (Optional)
+        <input name="due_time" type="time">
+      </label>
+
+      <label>Tags (Comma separated)
+        <input name="tags" placeholder="e.g. urgent, backend, v2">
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_starred">
+        <span>Star as Important</span>
+      </label>
+    </div>
+    
+    <p id="task-error" class="error" role="alert"></p>
+    
+    <div class="actions">
+      <button type="button" class="btn ghost" id="dlg-cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="dlg-submit">Save task</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- TASK DETAIL VIEW DRAWER / MODAL -->
+<dialog id="task-detail-dialog">
+  <div class="detail-wrap">
+    <div class="detail-head">
+      <span class="pill" id="det-priority">Priority</span>
+      <span class="pill" id="det-category">Category</span>
+      <span class="pill" id="det-status">Status</span>
+      <button type="button" class="btn-close" id="det-close" aria-label="Close">✕</button>
+    </div>
+    <h2 id="det-title" class="det-title">Task Title</h2>
+    <p id="det-desc" class="det-desc">Task description...</p>
+    
+    <div class="det-grid">
+      <div><strong>Due Date</strong><span id="det-due">None</span></div>
+      <div><strong>Due Time</strong><span id="det-time">None</span></div>
+      <div><strong>Created</strong><span id="det-created">–</span></div>
+      <div><strong>Completed</strong><span id="det-completed">–</span></div>
+    </div>
+
+    <div class="det-tags-wrap">
+      <strong>Tags:</strong>
+      <div id="det-tags" class="det-tags"></div>
+    </div>
+
+    <div class="det-actions">
+      <button type="button" class="btn primary btn-sm" id="det-btn-edit">Edit Task</button>
+      <button type="button" class="btn ghost btn-sm" id="det-btn-star">Star Task</button>
+      <button type="button" class="btn ghost btn-sm" id="det-btn-dup">Duplicate</button>
+      <button type="button" class="btn danger btn-sm" id="det-btn-delete">Delete</button>
+    </div>
   </div>
-  <p id="task-error" class="error" role="alert"></p>
-  <div class="actions"><button type="button" class="btn ghost" id="dlg-cancel">Cancel</button><button class="btn primary">Save task</button></div>
-</form></dialog>
-<div id="toast" role="status"></div>
-<script src="{{ url_for('static', filename='js/app.js') }}"></script></body></html>
+</dialog>
+
+<!-- KEYBOARD SHORTCUTS MODAL -->
+<dialog id="shortcuts-dialog">
+  <div class="shortcuts-card">
+    <div class="dialog-h">
+      <h3>Keyboard Shortcuts</h3>
+      <button type="button" class="btn-close" id="shortcuts-close" aria-label="Close">✕</button>
+    </div>
+    <ul class="shortcuts-list">
+      <li><span>Quick Focus Search</span><kbd>/</kbd></li>
+      <li><span>Add New Task</span><kbd>N</kbd></li>
+      <li><span>Toggle Theme (Dark / Light)</span><kbd>T</kbd></li>
+      <li><span>Toggle Sidebar</span><kbd>[</kbd></li>
+      <li><span>Close Any Modal / Dialog</span><kbd>Esc</kbd></li>
+      <li><span>Open Shortcuts Help</span><kbd>?</kbd></li>
+    </ul>
+  </div>
+</dialog>
+
+<!-- TOAST NOTIFICATION WITH OPTIONAL UNDO -->
+<div id="toast" role="status" aria-live="polite">
+  <span id="toast-text"></span>
+  <button id="toast-undo" class="toast-undo" hidden>Undo</button>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
