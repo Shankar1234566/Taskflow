@@ -1,14 +1,58 @@
+import os
 from datetime import date, datetime, timedelta, timezone
-from flask import Blueprint, request, session, jsonify
-from models import db, Task, ActivityLog
-from .auth import login_required
+from flask import Blueprint, request, session, jsonify, current_app, send_from_directory
+from werkzeug.utils import secure_filename
+from models import db, Task, User, Team, ActivityLog
+from utils.auth_decorators import login_required, role_required
 
 tasks_bp = Blueprint("tasks", __name__)
 VALID_PRIORITIES = {"Critical", "High", "Medium", "Low"}
+VALID_CATEGORIES = {"Frontend", "Backend", "Bug", "QA", "Docs", "Work", "Development", "Personal", "Design", "Study"}
+VALID_STATUSES = {"Pending", "In Progress", "In Review", "Completed"}
 
-def get_user_task(task_id):
-    """Retrieve a task only if it belongs to the authenticated user."""
-    return Task.query.filter_by(id=task_id, user_id=session["user_id"]).first()
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "uploads", "proofs")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def get_current_user():
+    """Retrieve the currently authenticated User model."""
+    uid = session.get("user_id")
+    if not uid:
+        return None
+    return db.session.get(User, uid)
+
+def get_accessible_task(task_id, current_user=None):
+    """
+    Retrieve a task respecting the company hierarchy:
+    - Admin: can access any task.
+    - Team Lead: can access tasks within their team, or assigned/created by them.
+    - Member / Employee: can view tasks within their team, or assigned/created by them.
+    """
+    if current_user is None:
+        current_user = get_current_user()
+    if not current_user:
+        return None
+
+    task = db.session.get(Task, task_id)
+    if not task:
+        return None
+
+    if current_user.role == "Admin" or current_user.is_admin:
+        return task
+
+    if current_user.role == "Lead":
+        if current_user.team_id and task.team_id == current_user.team_id:
+            return task
+        if task.assigned_to_id == current_user.id or task.user_id == current_user.id or task.created_by_id == current_user.id:
+            return task
+        return None
+
+    # Member / Employee: can access tasks in their team workspace or assigned/created by them
+    if current_user.team_id and task.team_id == current_user.team_id:
+        return task
+    if task.assigned_to_id == current_user.id or task.user_id == current_user.id or task.created_by_id == current_user.id:
+        return task
+
+    return None
 
 def log_activity(action, task_title, task_id=None, details=""):
     """Record an audit trail event for the current user."""
@@ -51,10 +95,10 @@ def validate_task_input(data, partial=False):
 
     # Category validation
     if "category" in data:
-        raw_category = str(data.get("category") or "Work").strip()
-        cleaned["category"] = raw_category[:50] if raw_category else "Work"
+        raw_category = str(data.get("category") or "Frontend").strip()
+        cleaned["category"] = raw_category[:50] if raw_category else "Frontend"
     elif not partial:
-        cleaned["category"] = "Work"
+        cleaned["category"] = "Frontend"
 
     # Priority validation
     if "priority" in data:
@@ -64,6 +108,21 @@ def validate_task_input(data, partial=False):
         cleaned["priority"] = raw_priority
     elif not partial:
         cleaned["priority"] = "Medium"
+
+    # Status validation
+    if "status" in data:
+        raw_status = str(data.get("status") or "").strip()
+        if raw_status in VALID_STATUSES:
+            cleaned["status"] = raw_status
+            cleaned["completed"] = (raw_status == "Completed")
+            if raw_status == "Completed":
+                cleaned["completed_at"] = datetime.now(timezone.utc)
+            else:
+                cleaned["completed_at"] = None
+    elif not partial:
+        cleaned["status"] = "In Progress"
+        cleaned["completed"] = False
+        cleaned["completed_at"] = None
 
     # Due date validation
     if "due_date" in data:
@@ -99,12 +158,19 @@ def validate_task_input(data, partial=False):
     if "completed" in data:
         cleaned["completed"] = bool(data["completed"])
         if cleaned["completed"]:
+            cleaned["status"] = "Completed"
             cleaned["completed_at"] = datetime.now(timezone.utc)
         else:
+            if not partial or "status" not in cleaned:
+                cleaned["status"] = "In Progress"
             cleaned["completed_at"] = None
-    elif not partial:
-        cleaned["completed"] = False
-        cleaned["completed_at"] = None
+
+    # Enterprise Team & Assignee fields
+    if "team_id" in data:
+        cleaned["team_id"] = int(data["team_id"]) if data["team_id"] else None
+
+    if "assigned_to_id" in data:
+        cleaned["assigned_to_id"] = int(data["assigned_to_id"]) if data["assigned_to_id"] else None
 
     return cleaned, None
 
@@ -112,11 +178,52 @@ def validate_task_input(data, partial=False):
 @tasks_bp.get("/")
 @login_required
 def list_tasks():
-    """List tasks belonging exclusively to current user with search, filter, and sort."""
-    user_id = session["user_id"]
-    query = Task.query.filter_by(user_id=user_id)
+    """
+    Context-aware task retrieval:
+    - Admin: can filter by ?team_id=X or view all squads with ?all=true.
+    - Lead: returns all tasks belonging to their assigned team.
+    - Member: returns only tasks where assigned_to_id == current_user.id.
+    """
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify(error="Authentication required"), 401
+
     args = request.args
     today = date.today()
+    query = Task.query
+
+    # Role-based workspace isolation
+    all_param = args.get("all", "").lower() in ("true", "1") or args.get("all_squads", "").lower() in ("true", "1")
+    team_id = args.get("team_id", type=int)
+    scope = (args.get("scope") or args.get("view") or "").strip().lower()
+
+    if current_user.role == "Admin" or current_user.is_admin:
+        if team_id:
+            query = query.filter(Task.team_id == team_id)
+        # Admin can view all tasks across company when no team_id filter is specified
+    elif current_user.role == "Lead":
+        if current_user.team_id:
+            query = query.filter(Task.team_id == current_user.team_id)
+        else:
+            query = query.filter(db.or_(
+                Task.assigned_to_id == current_user.id,
+                Task.user_id == current_user.id
+            ))
+    else:
+        # Software Engineer / Employee / Member
+        if scope in ("my", "my-tasks") or args.get("assigned") == "me":
+            query = query.filter(db.or_(
+                Task.assigned_to_id == current_user.id,
+                Task.user_id == current_user.id
+            ))
+        elif current_user.team_id:
+            # Team workspace view: shows all deliverables in designated team
+            query = query.filter(Task.team_id == current_user.team_id)
+        else:
+            query = query.filter(db.or_(
+                Task.assigned_to_id == current_user.id,
+                Task.user_id == current_user.id
+            ))
 
     # Search filter (title, description, tags)
     search = (args.get("search") or "").strip()
@@ -131,11 +238,13 @@ def list_tasks():
     # Status filter
     status = (args.get("status") or "").strip().lower()
     if status == "completed":
-        query = query.filter(Task.completed.is_(True))
+        query = query.filter(db.or_(Task.completed.is_(True), Task.status == "Completed"))
     elif status in ("pending", "in_progress"):
-        query = query.filter(Task.completed.is_(False))
+        query = query.filter(Task.completed.is_(False), Task.status == ("Pending" if status == "pending" else "In Progress"))
+    elif status == "in_review":
+        query = query.filter(Task.status == "In Review")
     elif status == "overdue":
-        query = query.filter(Task.completed.is_(False), Task.due_date.is_not(None), Task.due_date < today)
+        query = query.filter(Task.completed.is_(False), Task.status != "Completed", Task.due_date.is_not(None), Task.due_date < today)
 
     # Starred filter
     starred_arg = args.get("starred")
@@ -189,7 +298,6 @@ def list_tasks():
         col = Task.title.desc() if order == "desc" else Task.title.asc()
         query = query.order_by(col)
     elif sort_by == "priority":
-        # Order Critical -> High -> Medium -> Low
         priority_case = db.case(
             {"Critical": 1, "High": 2, "Medium": 3, "Low": 4},
             value=Task.priority,
@@ -209,13 +317,27 @@ def list_tasks():
         )
 
     tasks = query.all()
-    return jsonify(tasks=[t.to_dict() for t in tasks]), 200
+    is_lead_or_admin = current_user.role in ("Admin", "Lead") or current_user.is_admin
+    out = []
+    for t in tasks:
+        d = t.to_dict()
+        if is_lead_or_admin:
+            d["can_edit"] = True
+        else:
+            d["can_edit"] = bool(t.assigned_to_id == current_user.id or t.user_id == current_user.id)
+        out.append(d)
+    return jsonify(tasks=out), 200
 
 @tasks_bp.post("")
 @tasks_bp.post("/")
 @login_required
 def create_task():
-    """Create a new task belonging to the authenticated user."""
+    """
+    Create and assign a task.
+    - Leads and Admins can assign to direct reports (assigned_to_id).
+    - Members can create deliverables assigned to themselves.
+    """
+    current_user = get_current_user()
     data = request.get_json(silent=True)
     if data is None:
         return jsonify(error="Invalid JSON body."), 400
@@ -224,7 +346,43 @@ def create_task():
     if error:
         return jsonify(error=error), 400
 
-    task = Task(user_id=session["user_id"], **cleaned)
+    # Role permission check for assignee allocation
+    assigned_to_id = cleaned.get("assigned_to_id")
+    target_team_id = cleaned.get("team_id")
+
+    if assigned_to_id:
+        # If assigning to someone else, check privileges
+        if assigned_to_id != current_user.id:
+            if current_user.role not in ("Admin", "Lead") and not current_user.is_admin:
+                return jsonify(error="Only Team Leads and Engineering Managers can assign tasks to other members."), 403
+
+            assignee = db.session.get(User, assigned_to_id)
+            if not assignee:
+                return jsonify(error="Assignee user not found."), 404
+
+            # If Team Lead, authority is scoped to employees in their designated squad
+            if current_user.role == "Lead" and not current_user.is_admin:
+                if current_user.team_id and assignee.team_id != current_user.team_id:
+                    return jsonify(error="Team Leads can only assign tasks to employees within their designated squad."), 403
+
+            task_user_id = assignee.id
+            if not target_team_id or (current_user.role == "Lead" and not current_user.is_admin):
+                target_team_id = current_user.team_id or assignee.team_id
+    else:
+        task_user_id = current_user.id
+        assigned_to_id = current_user.id
+        if not target_team_id or (current_user.role == "Lead" and not current_user.is_admin):
+            target_team_id = current_user.team_id
+
+    initial_status = cleaned.get("status") or "Pending"
+    task = Task(
+        user_id=task_user_id,
+        assigned_to_id=assigned_to_id,
+        created_by_id=current_user.id,
+        team_id=target_team_id,
+        status=initial_status,
+        **{k: v for k, v in cleaned.items() if k not in ("team_id", "assigned_to_id", "status")}
+    )
     db.session.add(task)
     db.session.commit()
 
@@ -236,19 +394,29 @@ def create_task():
 @tasks_bp.get("/<int:task_id>")
 @login_required
 def get_task(task_id):
-    """Retrieve a single task belonging to the authenticated user."""
-    task = get_user_task(task_id)
+    """Retrieve a single task with company hierarchy permissions."""
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
     if not task:
         return jsonify(error="Task not found."), 404
-    return jsonify(task=task.to_dict()), 200
+    d = task.to_dict()
+    is_lead_or_admin = current_user.role in ("Admin", "Lead") or current_user.is_admin
+    d["can_edit"] = True if is_lead_or_admin else bool(task.assigned_to_id == current_user.id or task.user_id == current_user.id)
+    return jsonify(task=d), 200
 
 @tasks_bp.put("/<int:task_id>")
 @login_required
 def update_task(task_id):
-    """Update editable fields of a task owned by the authenticated user."""
-    task = get_user_task(task_id)
+    """Update editable fields of a task."""
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
     if not task:
         return jsonify(error="Task not found."), 404
+
+    # Action restriction: Members / Employees can only edit deliverables assigned to them
+    if current_user.role in ("Member", "Employee") and not current_user.is_admin:
+        if task.assigned_to_id != current_user.id and task.user_id != current_user.id:
+            return jsonify(error="Action forbidden. Employees can only modify tasks assigned directly to them."), 403
 
     data = request.get_json(silent=True)
     if data is None:
@@ -258,8 +426,22 @@ def update_task(task_id):
     if error:
         return jsonify(error=error), 400
 
+    # If reassigning member
+    if "assigned_to_id" in cleaned and cleaned["assigned_to_id"]:
+        new_assignee_id = cleaned["assigned_to_id"]
+        if new_assignee_id != task.assigned_to_id:
+            if current_user.role not in ("Admin", "Lead") and not current_user.is_admin:
+                return jsonify(error="Only Leads and Admins can reassign tasks."), 403
+            assignee = db.session.get(User, new_assignee_id)
+            if assignee:
+                task.assigned_to_id = assignee.id
+                task.user_id = assignee.id
+                if not task.team_id and assignee.team_id:
+                    task.team_id = assignee.team_id
+
     for field, val in cleaned.items():
-        setattr(task, field, val)
+        if field not in ("assigned_to_id",):
+            setattr(task, field, val)
 
     task.updated_at = datetime.now(timezone.utc)
     db.session.commit()
@@ -267,15 +449,161 @@ def update_task(task_id):
     log_activity("updated", task.title, task.id)
     db.session.commit()
 
-    return jsonify(task=task.to_dict(), message="Task updated successfully."), 200
+    d = task.to_dict()
+    is_lead_or_admin = current_user.role in ("Admin", "Lead") or current_user.is_admin
+    d["can_edit"] = True if is_lead_or_admin else bool(task.assigned_to_id == current_user.id or task.user_id == current_user.id)
+    return jsonify(task=d, message="Task updated successfully."), 200
+
+@tasks_bp.patch("/<int:task_id>/status")
+@login_required
+def update_status(task_id):
+    """Member status progression (e.g., Pending -> In Progress)."""
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
+    if not task:
+        return jsonify(error="Task not found."), 404
+
+    # Action restriction: Members / Employees can only progress tasks assigned to them
+    if current_user.role in ("Member", "Employee") and not current_user.is_admin:
+        if task.assigned_to_id != current_user.id and task.user_id != current_user.id:
+            return jsonify(error="Action forbidden. Employees can only update status for tasks assigned directly to them."), 403
+
+    data = request.get_json(silent=True) or {}
+    new_status = data.get("status")
+    if new_status not in VALID_STATUSES:
+        return jsonify(error="Invalid status transition."), 400
+
+    task.status = new_status
+    if new_status == "Completed":
+        task.completed = True
+        task.completed_at = datetime.now(timezone.utc)
+    else:
+        task.completed = False
+        task.completed_at = None
+
+    task.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    log_activity(f"status_{new_status.lower().replace(' ', '_')}", task.title, task.id)
+    db.session.commit()
+
+    return jsonify(task=task.to_dict(), message=f"Task transitioned to {new_status}."), 200
+
+@tasks_bp.post("/<int:task_id>/submit-proof")
+@login_required
+def submit_proof_of_work(task_id):
+    """
+    Multipart form handler for Software Engineers to submit proof of work.
+    Accepts:
+    - notes: text implementation notes
+    - git_link: Git PR or commit URL
+    - proof_file: optional file attachment (screenshot, log, zip)
+    Sets task status to 'In Review'.
+    """
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
+    if not task:
+        return jsonify(error="Task not found."), 404
+
+    # Extract fields from multipart or JSON
+    if request.content_type and "multipart/form-data" in request.content_type:
+        notes = request.form.get("notes") or request.form.get("submission_notes") or ""
+        git_link = request.form.get("git_link") or request.form.get("git_repo_link") or ""
+        proof_file = request.files.get("proof_file")
+    else:
+        data = request.get_json(silent=True) or {}
+        notes = data.get("notes") or data.get("submission_notes") or ""
+        git_link = data.get("git_link") or data.get("git_repo_link") or ""
+        proof_file = None
+
+    # Save uploaded file if present
+    file_rel_path = task.proof_file_path
+    if proof_file and proof_file.filename:
+        filename = secure_filename(proof_file.filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        saved_name = f"{task.id}_{timestamp}_{filename}"
+        proof_file.save(os.path.join(UPLOAD_FOLDER, saved_name))
+        file_rel_path = f"/static/uploads/proofs/{saved_name}"
+
+    task.submission_notes = notes.strip()
+    task.git_repo_link = git_link.strip()
+    if file_rel_path:
+        task.proof_file_path = file_rel_path
+    task.submitted_at = datetime.now(timezone.utc)
+    task.status = "In Review"
+    task.completed = False
+    task.completed_at = None
+    task.updated_at = datetime.now(timezone.utc)
+
+    db.session.commit()
+    log_activity("submitted_proof", task.title, task.id, f"PR: {git_link[:60] if git_link else 'None'}")
+    db.session.commit()
+
+    return jsonify(task=task.to_dict(), message="Proof of work submitted. Deliverable is now In Review."), 200
+
+@tasks_bp.patch("/<int:task_id>/review")
+@role_required("Admin", "Lead")
+def review_task(task_id):
+    """
+    Lead / Admin Review Pipeline endpoint.
+    Accepts:
+    - action: "approve" | "reject" | "changes_requested"
+    - feedback: reviewer notes or revision instructions
+    """
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
+    if not task:
+        return jsonify(error="Task not found."), 404
+
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").lower()
+    feedback = (data.get("feedback") or "").strip()
+
+    if action not in ("approve", "reject", "changes_requested", "request_changes"):
+        return jsonify(error="Review action must be 'approve' or 'reject'."), 400
+
+    if action == "approve":
+        task.status = "Completed"
+        task.completed = True
+        task.completed_at = datetime.now(timezone.utc)
+        task.feedback_notes = feedback
+        task.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        log_activity("approved_deliverable", task.title, task.id, f"Feedback: {feedback[:60] if feedback else 'Approved'}")
+        msg = "Deliverable approved and marked as Completed."
+    else:
+        # Request changes / reject proof
+        task.status = "In Progress"
+        task.completed = False
+        task.completed_at = None
+        task.feedback_notes = feedback
+        task.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        log_activity("requested_changes", task.title, task.id, f"Feedback: {feedback[:60]}")
+        msg = "Revision requested. Deliverable reverted to In Progress with reviewer comments."
+
+    db.session.commit()
+    return jsonify(task=task.to_dict(), message=msg), 200
+
+@tasks_bp.get("/uploads/<path:filename>")
+@login_required
+def serve_upload(filename):
+    """Securely serve uploaded proof of work attachments."""
+    return send_from_directory(UPLOAD_FOLDER, secure_filename(filename))
 
 @tasks_bp.patch("/<int:task_id>/complete")
 @login_required
 def toggle_complete(task_id):
     """Toggle completion or set explicit completion state."""
-    task = get_user_task(task_id)
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
     if not task:
         return jsonify(error="Task not found."), 404
+
+    # Action restriction: Members / Employees can only complete deliverables assigned to them
+    if current_user.role in ("Member", "Employee") and not current_user.is_admin:
+        if task.assigned_to_id != current_user.id and task.user_id != current_user.id:
+            return jsonify(error="Action forbidden. Employees can only complete deliverables assigned to them."), 403
 
     body = request.get_json(silent=True) or {}
     if "completed" in body:
@@ -284,22 +612,28 @@ def toggle_complete(task_id):
         task.completed = not task.completed
 
     if task.completed:
+        task.status = "Completed"
         task.completed_at = datetime.now(timezone.utc)
         log_activity("completed", task.title, task.id)
     else:
+        task.status = "In Progress"
         task.completed_at = None
         log_activity("reopened", task.title, task.id)
 
     task.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
-    return jsonify(task=task.to_dict(), message="Task completion status updated."), 200
+    d = task.to_dict()
+    is_lead_or_admin = current_user.role in ("Admin", "Lead") or current_user.is_admin
+    d["can_edit"] = True if is_lead_or_admin else bool(task.assigned_to_id == current_user.id or task.user_id == current_user.id)
+    return jsonify(task=d, message="Task completion status updated."), 200
 
 @tasks_bp.post("/<int:task_id>/star")
 @login_required
 def toggle_star(task_id):
     """Toggle starred/important status of a task."""
-    task = get_user_task(task_id)
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
     if not task:
         return jsonify(error="Task not found."), 404
 
@@ -321,16 +655,21 @@ def toggle_star(task_id):
 @login_required
 def duplicate_task(task_id):
     """Create a duplicate copy of an existing task."""
-    task = get_user_task(task_id)
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
     if not task:
         return jsonify(error="Task not found."), 404
 
     clone = Task(
         user_id=session["user_id"],
+        assigned_to_id=task.assigned_to_id or session["user_id"],
+        created_by_id=session["user_id"],
+        team_id=task.team_id,
         title=f"{task.title} (Copy)"[:200],
         description=task.description,
         category=task.category,
         priority=task.priority,
+        status="Pending",
         due_date=task.due_date,
         due_time=task.due_time,
         tags=task.tags,
@@ -348,10 +687,16 @@ def duplicate_task(task_id):
 @tasks_bp.delete("/<int:task_id>")
 @login_required
 def delete_task(task_id):
-    """Delete a task owned by the authenticated user."""
-    task = get_user_task(task_id)
+    """Delete a task."""
+    current_user = get_current_user()
+    task = get_accessible_task(task_id, current_user)
     if not task:
         return jsonify(error="Task not found."), 404
+
+    # Action restriction: Members / Employees cannot delete teammates' deliverables
+    if current_user.role in ("Member", "Employee") and not current_user.is_admin:
+        if task.created_by_id != current_user.id and task.user_id != current_user.id:
+            return jsonify(error="Action forbidden. Employees cannot delete teammates' tasks."), 403
 
     title = task.title
     db.session.delete(task)
@@ -366,15 +711,24 @@ def delete_task(task_id):
 @login_required
 def bulk_complete():
     """Mark multiple tasks as completed."""
+    current_user = get_current_user()
     data = request.get_json(silent=True) or {}
     task_ids = data.get("task_ids") or []
     if not isinstance(task_ids, list) or not task_ids:
         return jsonify(error="No task IDs provided."), 400
 
-    tasks = Task.query.filter(Task.user_id == session["user_id"], Task.id.in_(task_ids)).all()
+    query = Task.query.filter(Task.id.in_(task_ids))
+    if current_user.role != "Admin" and not current_user.is_admin:
+        if current_user.role == "Lead" and current_user.team_id:
+            query = query.filter(Task.team_id == current_user.team_id)
+        else:
+            query = query.filter(db.or_(Task.assigned_to_id == current_user.id, Task.user_id == current_user.id))
+
+    tasks = query.all()
     now = datetime.now(timezone.utc)
     for t in tasks:
         t.completed = True
+        t.status = "Completed"
         t.completed_at = now
         t.updated_at = now
 
@@ -388,12 +742,20 @@ def bulk_complete():
 @login_required
 def bulk_delete():
     """Delete multiple tasks at once."""
+    current_user = get_current_user()
     data = request.get_json(silent=True) or {}
     task_ids = data.get("task_ids") or []
     if not isinstance(task_ids, list) or not task_ids:
         return jsonify(error="No task IDs provided."), 400
 
-    tasks = Task.query.filter(Task.user_id == session["user_id"], Task.id.in_(task_ids)).all()
+    query = Task.query.filter(Task.id.in_(task_ids))
+    if current_user.role != "Admin" and not current_user.is_admin:
+        if current_user.role == "Lead" and current_user.team_id:
+            query = query.filter(Task.team_id == current_user.team_id)
+        else:
+            query = query.filter(db.or_(Task.assigned_to_id == current_user.id, Task.user_id == current_user.id))
+
+    tasks = query.all()
     count = len(tasks)
     for t in tasks:
         db.session.delete(t)
@@ -409,7 +771,7 @@ def bulk_delete():
 def reorder_tasks():
     """Update custom sorting order_index for tasks."""
     data = request.get_json(silent=True) or {}
-    order_map = data.get("order") or []  # List of {id: int, order_index: int}
+    order_map = data.get("order") or []
     if not isinstance(order_map, list):
         return jsonify(error="Invalid order mapping."), 400
 
@@ -417,7 +779,7 @@ def reorder_tasks():
         tid = item.get("id")
         idx = item.get("order_index")
         if tid is not None and idx is not None:
-            Task.query.filter_by(id=tid, user_id=session["user_id"]).update({"order_index": idx})
+            Task.query.filter_by(id=tid).update({"order_index": idx})
 
     db.session.commit()
     return jsonify(ok=True, message="Task order updated."), 200

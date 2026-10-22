@@ -12,6 +12,10 @@ def app():
         db.create_all()
         yield test_app
         db.session.remove()
+        try:
+            db.session.execute(db.text("PRAGMA foreign_keys = OFF"))
+        except Exception:
+            pass
         db.drop_all()
 
 @pytest.fixture

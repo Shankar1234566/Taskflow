@@ -19,12 +19,20 @@ def create_app(config_class=Config):
     from routes.dashboard import dashboard_bp
     from routes.admin import admin_bp
     from routes.activity import activity_bp
+    from routes.teams import teams_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(tasks_bp, url_prefix="/api/tasks")
     app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(activity_bp, url_prefix="/api/activity")
+    app.register_blueprint(teams_bp, url_prefix="/api/teams")
+
+    # Team members alias endpoint (/api/team/members and /api/teams/members)
+    @app.route("/api/team/members", methods=["GET"])
+    def team_members_alias():
+        from routes.teams import get_team_members
+        return get_team_members()
 
     # Frontend Page Routes
     @app.route("/")

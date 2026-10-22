@@ -1,7 +1,7 @@
 import re
 from functools import wraps
 from flask import Blueprint, request, session, jsonify, current_app
-from models import db, User
+from models import db, User, Team
 
 auth_bp = Blueprint("auth", __name__)
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
@@ -20,12 +20,16 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrap
 
+from utils.auth_decorators import role_required
+
 def register_user():
     """Shared logic for registration endpoints (/register and /signup)."""
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or data.get("username") or "").strip()
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
+    role = data.get("role")
+    team_id = data.get("team_id")
 
     if not name:
         return jsonify(error="Name is required."), 400
@@ -41,12 +45,36 @@ def register_user():
 
     # First user in the system automatically gets admin privileges
     is_first = User.query.count() == 0
-    user = User(name=name[:80], email=email, is_admin=is_first)
+    raw_role = (data.get("role") or "").strip()
+    if raw_role in ("Lead", "Team Lead"):
+        assigned_role = "Lead"
+    elif raw_role in ("Employee", "Member"):
+        assigned_role = raw_role
+    elif raw_role == "Admin":
+        assigned_role = "Admin"
+    elif is_first:
+        assigned_role = "Admin"
+    else:
+        assigned_role = "Member"
+
+    is_admin = is_first or assigned_role == "Admin"
+    team_id_val = int(team_id) if team_id else None
+
+    user = User(name=name[:80], email=email, is_admin=is_admin, role=assigned_role, team_id=team_id_val)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
 
+    # If user registered as Team Lead for a designated squad, set squad lead_id
+    if assigned_role == "Lead" and team_id_val:
+        team = db.session.get(Team, team_id_val)
+        if team:
+            team.lead_id = user.id
+            db.session.commit()
+
     session["user_id"] = user.id
+    session["role"] = user.role
+    session["team_id"] = user.team_id
     return jsonify(user=user.to_dict(), message="Account created successfully."), 201
 
 @auth_bp.post("/register")
@@ -71,6 +99,8 @@ def login():
         return jsonify(error="Incorrect email or password."), 401
 
     session["user_id"] = user.id
+    session["role"] = user.role
+    session["team_id"] = user.team_id
     return jsonify(user=user.to_dict(), message="Login successful."), 200
 
 @auth_bp.post("/logout")

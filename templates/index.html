@@ -15,9 +15,30 @@
   <section class="card auth">
     <div class="tabs"><button class="tab active" data-mode="login">Log in</button><button class="tab" data-mode="signup">Sign up</button></div>
     <form id="auth-form" novalidate>
-      <label class="signup-only" hidden>Name<input name="username" autocomplete="name"></label>
-      <label>Email<input name="email" type="email" autocomplete="email" required></label>
-      <label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
+      <label class="signup-only" hidden>Full Name<input name="username" autocomplete="name" placeholder="e.g. Alex Morgan"></label>
+      <label>Work Email<input name="email" type="email" autocomplete="email" required placeholder="name@company.com"></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Minimum 8 characters"></label>
+      
+      <div class="signup-only form-field" hidden>
+        <label for="signup-role">Role Persona</label>
+        <select name="role" id="signup-role" class="auth-select">
+          <option value="Employee">Employee (Software Engineer)</option>
+          <option value="Lead">Team Lead</option>
+          <option value="Admin">Admin (Engineering Manager)</option>
+        </select>
+      </div>
+
+      <div class="signup-only form-field" id="signup-team-wrap" hidden>
+        <label for="signup-team">Designated Team / Squad</label>
+        <select name="team_id" id="signup-team" class="auth-select">
+          <option value="">Select your Squad...</option>
+          <option value="1">Frontend Squad</option>
+          <option value="2">Backend Squad</option>
+          <option value="3">Mobile Squad</option>
+          <option value="4">QA Squad</option>
+        </select>
+      </div>
+
       <p id="auth-error" class="error" role="alert"></p>
       <button class="btn primary" id="auth-submit">Log in</button>
     </form>

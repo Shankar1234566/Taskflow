@@ -15,6 +15,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
+from .team import Team  # noqa: E402
 from .user import User  # noqa: E402
 from .task import Task  # noqa: E402
 from .activity import ActivityLog  # noqa: E402

@@ -47,14 +47,17 @@ def list_users():
     users = User.query.order_by(User.id.asc()).all()
     user_list = []
     for u in users:
-        t_count = Task.query.filter_by(user_id=u.id).count()
-        c_count = Task.query.filter_by(user_id=u.id, completed=True).count()
+        t_count = Task.query.filter(db.or_(Task.assigned_to_id == u.id, Task.user_id == u.id)).count()
+        c_count = Task.query.filter(db.or_(Task.assigned_to_id == u.id, Task.user_id == u.id), db.or_(Task.completed.is_(True), Task.status == "Completed")).count()
         user_list.append({
             "id": u.id,
             "name": u.name,
             "username": u.username,
             "email": u.email,
-            "is_admin": bool(u.is_admin),
+            "role": u.role or ("Admin" if u.is_admin else "Member"),
+            "team_id": u.team_id,
+            "team_name": u.team.name if u.team else "Unassigned",
+            "is_admin": bool(u.is_admin or u.role == "Admin"),
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "task_count": t_count,
             "completed_count": c_count
@@ -73,12 +76,35 @@ def toggle_admin(user_id):
         return jsonify(error="User not found."), 404
 
     target_user.is_admin = not target_user.is_admin
+    target_user.role = "Admin" if target_user.is_admin else "Member"
     db.session.commit()
 
     return jsonify(
         user=target_user.to_dict(),
         message=f"Admin rights {'granted to' if target_user.is_admin else 'revoked from'} {target_user.name}."
     ), 200
+
+@admin_bp.post("/users/<int:user_id>/role")
+@admin_required
+def set_user_role(user_id):
+    """Admin endpoint to update user role and squad assignment."""
+    target_user = db.session.get(User, user_id)
+    if not target_user:
+        return jsonify(error="User not found."), 404
+
+    data = request.get_json(silent=True) or {}
+    new_role = data.get("role")
+    new_team_id = data.get("team_id")
+
+    if new_role in ("Admin", "Lead", "Member"):
+        target_user.role = new_role
+        target_user.is_admin = (new_role == "Admin")
+
+    if "team_id" in data:
+        target_user.team_id = new_team_id if new_team_id else None
+
+    db.session.commit()
+    return jsonify(user=target_user.to_dict(), message=f"User {target_user.name} role updated to {target_user.role}."), 200
 
 @admin_bp.delete("/users/<int:user_id>")
 @admin_required

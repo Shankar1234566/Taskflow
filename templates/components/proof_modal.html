@@ -1,0 +1,42 @@
+<!-- SUBMIT PROOF OF WORK MODAL (For Software Engineers / Members) -->
+<dialog id="proof-dialog">
+  <form id="proof-form" method="dialog" novalidate>
+    <div class="dialog-h">
+      <div>
+        <h3 id="proof-dlg-title">Submit Proof of Work</h3>
+        <p class="card-sub" id="proof-task-sub">Ready for review by your Team Lead</p>
+      </div>
+      <button type="button" class="btn-close" id="proof-dlg-close" aria-label="Close">✕</button>
+    </div>
+
+    <input type="hidden" id="proof-task-id" name="task_id">
+
+    <div id="proof-changes-alert" class="feedback-box error" hidden>
+      <strong>Previous Reviewer Feedback:</strong>
+      <p id="proof-changes-text" style="margin:4px 0 0;"></p>
+    </div>
+
+    <label>Git PR / Commit URL *
+      <input type="url" id="proof-git-link" name="git_link" placeholder="https://github.com/org/repo/pull/12" required>
+    </label>
+
+    <label>Execution Summary / Implementation Notes *
+      <textarea id="proof-notes" name="notes" rows="4" placeholder="Summarize changes made, unit tests added, performance considerations..." required></textarea>
+    </label>
+
+    <label>Proof File Attachment (Screenshot, Test Logs, or Archive)
+      <div class="file-drop-area" id="proof-drop-area">
+        <input type="file" id="proof-file-input" name="proof_file" style="display:none;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:6px; color:var(--green);"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div id="proof-file-label">Click or drag & drop proof file (PNG, JPG, PDF, LOG, ZIP)</div>
+      </div>
+    </label>
+
+    <p id="proof-error" class="error" role="alert"></p>
+
+    <div class="actions">
+      <button type="button" class="btn ghost" id="proof-cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="proof-submit">Submit for Review</button>
+    </div>
+  </form>
+</dialog>

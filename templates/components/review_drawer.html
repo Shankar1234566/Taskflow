@@ -1,0 +1,60 @@
+<!-- LEAD REVIEW DRAWER / MODAL -->
+<dialog id="review-dialog">
+  <div class="detail-wrap" style="max-width: 580px;">
+    <div class="detail-head">
+      <span class="pill s-In-Review" id="rev-status">In Review</span>
+      <span class="pill" id="rev-priority">Priority</span>
+      <span class="pill" id="rev-category">Category</span>
+      <button type="button" class="btn-close" id="rev-close" aria-label="Close">✕</button>
+    </div>
+
+    <input type="hidden" id="rev-task-id">
+    <h2 id="rev-title" class="det-title" style="margin-top:10px;">Deliverable Title</h2>
+    <p id="rev-desc" class="det-desc">Deliverable requirements...</p>
+
+    <div class="det-grid" style="grid-template-columns: repeat(2, 1fr); margin: 16px 0;">
+      <div><strong>Assignee Engineer</strong><span id="rev-assignee">–</span></div>
+      <div><strong>Submitted At</strong><span id="rev-submitted">–</span></div>
+    </div>
+
+    <div style="margin-bottom: 14px;">
+      <label style="font-weight:600; color:var(--ink); margin-bottom:6px;">Git Pull Request / Commit</label>
+      <div id="rev-git-wrap">
+        <a id="rev-git-link" href="#" target="_blank" rel="noopener" class="git-link-chip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 7h3a5 5 0 015 5 5 5 0 01-5 5h-3m-6 0H6a5 5 0 01-5-5 5 5 0 015-5h3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <span id="rev-git-text">View Pull Request</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div id="rev-file-wrap" style="margin-bottom: 14px;" hidden>
+      <label style="font-weight:600; color:var(--ink); margin-bottom:6px;">Proof Attachment</label>
+      <a id="rev-file-link" href="#" target="_blank" download class="btn btn-sm" style="display:inline-flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span id="rev-file-name">Download Proof File</span>
+      </a>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label style="font-weight:600; color:var(--ink); margin-bottom:6px;">Engineer's Implementation Notes</label>
+      <div id="rev-notes" class="review-notes-box"></div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label style="font-weight:600; color:var(--ink); margin-bottom:6px;">Reviewer Comments / Revision Instructions</label>
+      <textarea id="rev-feedback" rows="3" placeholder="If requesting revisions, explain what changes are needed before approval..."></textarea>
+    </div>
+
+    <div class="det-actions" style="display:flex; justify-content:space-between; align-items:center;">
+      <button type="button" class="btn danger" id="rev-btn-reject" style="background:transparent;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Request Revision
+      </button>
+      <button type="button" class="btn primary" id="rev-btn-approve">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Approve Deliverable
+      </button>
+    </div>
+  </div>
+</dialog>
