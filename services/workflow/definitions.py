@@ -193,7 +193,7 @@ def build_default_enterprise_pipeline() -> WorkflowPipelineDefinition:
             description="Submit code proof of work or documentation for team lead signoff.",
             required_roles=["Admin", "Lead", "Member"],
             guards=[
-                GuardCondition("Proof Notes", "submission_notes", "is_not_empty", True, "Submission notes or pull request link is required.")
+                GuardCondition("Proof Notes", "submission_notes", "is_not_empty", True, "submission_notes or pull request link is required.")
             ]
         ),
         WorkflowTransition(
