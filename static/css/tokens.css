@@ -1,0 +1,221 @@
+/**
+ * TASKFLOW DESIGN SYSTEM TOKENS ENGINE
+ * static/css/tokens.css
+ *
+ * Enterprise Multi-Tier Task Management & Productivity Platform
+ * Mathematically consistent design tokens, semantic palettes, typography scale,
+ * elevation & layered shadows, transition timing curves, and strict z-index scale.
+ */
+
+:root {
+  /* ==========================================================================
+     1. PRIMITIVE & SEMANTIC COLOR PALETTES (Light Mode Foundation)
+     ========================================================================== */
+
+  /* Canvas & Base Surfaces */
+  --color-canvas-bg:         #F8F9FA;
+  --color-canvas-subtle:     #F1F3F5;
+  --color-canvas-inset:      #E9ECEF;
+  --color-surface:           #FFFFFF;
+  --color-surface-hover:     #F8FAFC;
+  --color-surface-active:    #F1F5F9;
+  --color-surface-selected:  #EDF7EE;
+
+  /* Typography Colors */
+  --color-text-primary:      #1F2937;
+  --color-text-secondary:    #4B5563;
+  --color-text-muted:        #6B7280;
+  --color-text-subtle:       #9CA3AF;
+  --color-text-inverse:      #FFFFFF;
+  --color-text-disabled:     #D1D5DB;
+
+  /* Borders, Lines & Dividers */
+  --color-border:            #E5E7EB;
+  --color-border-subtle:     #F3F4F6;
+  --color-border-strong:     #D1D5DB;
+  --color-border-focus:      #2E7D32;
+
+  /* Brand Primary Scale (Forest Green Engine) */
+  --color-brand-primary:     #2E7D32;
+  --color-brand-hover:       #1B5E20;
+  --color-brand-active:      #144618;
+  --color-brand-soft:        #E8F5E9;
+  --color-brand-border:      #A5D6A7;
+  --color-brand-glow:        rgba(46, 125, 50, 0.20);
+
+  /* Semantic Alert Scale: Success (Completed) */
+  --color-success-fg:        #15803D;
+  --color-success-bg:        #DCFCE7;
+  --color-success-border:    #BBF7D0;
+  --color-success-solid:     #16A34A;
+
+  /* Semantic Alert Scale: Warning & Pending */
+  --color-warning-fg:        #D97706;
+  --color-warning-bg:        #FEF3C7;
+  --color-warning-border:    #FDE68A;
+  --color-warning-solid:     #F59E0B;
+
+  /* Semantic Alert Scale: Error & Overdue (Blocked) */
+  --color-error-fg:          #DC2626;
+  --color-error-bg:          #FEE2E2;
+  --color-error-border:      #FECACA;
+  --color-error-solid:       #EF4444;
+  --color-error-pulse:       rgba(220, 38, 38, 0.35);
+
+  /* Semantic Alert Scale: In Review (Purple) */
+  --color-review-fg:         #7E22CE;
+  --color-review-bg:         #F3E8FF;
+  --color-review-border:     #E9D5FF;
+  --color-review-solid:      #9333EA;
+
+  /* Semantic Alert Scale: Info & In Progress (Sky Blue) */
+  --color-info-fg:           #0284C7;
+  --color-info-bg:           #E0F2FE;
+  --color-info-border:       #BAE6FD;
+  --color-info-solid:        #0EA5E9;
+
+  /* Workload / Category Palettes */
+  --color-cat-frontend-fg:    #0369A1;
+  --color-cat-frontend-bg:    #E0F2FE;
+  --color-cat-frontend-border:#BAE6FD;
+
+  --color-cat-backend-fg:     #6D28D9;
+  --color-cat-backend-bg:     #EDE9FE;
+  --color-cat-backend-border: #DDD6FE;
+
+  --color-cat-database-fg:    #0F766E;
+  --color-cat-database-bg:    #CCFBF1;
+  --color-cat-database-border:#99F6E4;
+
+  --color-cat-design-fg:      #BE185D;
+  --color-cat-design-bg:      #FCE7F3;
+  --color-cat-design-border:  #FBCFE8;
+
+  --color-cat-meetings-fg:    #B45309;
+  --color-cat-meetings-bg:    #FEF3C7;
+  --color-cat-meetings-border:#FDE68A;
+
+  /* Priority Palettes */
+  --color-priority-critical-fg:     #FFFFFF;
+  --color-priority-critical-bg:     #7F1D1D;
+  --color-priority-critical-border: #991B1B;
+
+  --color-priority-high-fg:         #B91C1C;
+  --color-priority-high-bg:         #FEE2E2;
+  --color-priority-high-border:     #FECACA;
+
+  --color-priority-medium-fg:       #B45309;
+  --color-priority-medium-bg:       #FEF3C7;
+  --color-priority-medium-border:   #FDE68A;
+
+  --color-priority-low-fg:          #15803D;
+  --color-priority-low-bg:          #DCFCE7;
+  --color-priority-low-border:      #BBF7D0;
+
+  /* Role Badge Palettes */
+  --color-role-admin-fg:            #4338CA;
+  --color-role-admin-bg:            #E0E7FF;
+  --color-role-admin-border:        #C7D2FE;
+
+  --color-role-lead-fg:             #92400E;
+  --color-role-lead-bg:             #FEF3C7;
+  --color-role-lead-border:         #FDE68A;
+
+  --color-role-member-fg:           #0369A1;
+  --color-role-member-bg:           #E0F2FE;
+  --color-role-member-border:       #BAE6FD;
+
+  /* ==========================================================================
+     2. TYPOGRAPHY SCALE (Strict REM & Proportional Heights)
+     ========================================================================== */
+  --font-family-base:        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-family-mono:        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --font-size-2xs:           0.6875rem; /* 11px */
+  --font-size-xs:            0.75rem;   /* 12px */
+  --font-size-sm:            0.8125rem; /* 13px */
+  --font-size-base:          0.875rem;  /* 14px */
+  --font-size-md:            1rem;      /* 16px */
+  --font-size-lg:            1.125rem;  /* 18px */
+  --font-size-xl:            1.25rem;   /* 20px */
+  --font-size-2xl:           1.5rem;    /* 24px */
+  --font-size-3xl:           1.875rem;  /* 30px */
+
+  --font-weight-normal:      400;
+  --font-weight-medium:      500;
+  --font-weight-semibold:    600;
+  --font-weight-bold:        700;
+
+  --line-height-none:        1;
+  --line-height-tight:       1.25;
+  --line-height-snug:        1.375;
+  --line-height-normal:      1.5;
+  --line-height-relaxed:     1.625;
+
+  --letter-spacing-tighter:  -0.035em;
+  --letter-spacing-tight:    -0.015em;
+  --letter-spacing-normal:    0em;
+  --letter-spacing-wide:      0.025em;
+  --letter-spacing-wider:     0.05em;
+
+  /* ==========================================================================
+     3. ELEVATION, MULTI-LAYER SHADOWS & CORNER RADII
+     ========================================================================== */
+  --shadow-rgb:              16 24 40;
+  --shadow-xs:               0 1px 2px 0 rgba(var(--shadow-rgb) / 0.05);
+  --shadow-sm:               0 1px 3px 0 rgba(var(--shadow-rgb) / 0.08), 0 1px 2px -1px rgba(var(--shadow-rgb) / 0.06);
+  --shadow-md:               0 4px 6px -1px rgba(var(--shadow-rgb) / 0.08), 0 2px 4px -2px rgba(var(--shadow-rgb) / 0.06);
+  --shadow-lg:               0 10px 15px -3px rgba(var(--shadow-rgb) / 0.08), 0 4px 6px -4px rgba(var(--shadow-rgb) / 0.06);
+  --shadow-xl:               0 20px 25px -5px rgba(var(--shadow-rgb) / 0.08), 0 8px 10px -6px rgba(var(--shadow-rgb) / 0.04);
+  --shadow-2xl:              0 25px 50px -12px rgba(var(--shadow-rgb) / 0.22);
+  --shadow-inner:            inset 0 2px 4px 0 rgba(var(--shadow-rgb) / 0.06);
+
+  --radius-xs:               4px;
+  --radius-sm:               6px;
+  --radius-md:               8px;
+  --radius-lg:               12px;
+  --radius-xl:               16px;
+  --radius-2xl:              24px;
+  --radius-full:             9999px;
+
+  /* ==========================================================================
+     4. EXPLICIT GLOBAL Z-INDEX LAYERING SCALE
+     ========================================================================== */
+  --z-deep:                 -1;
+  --z-base:                  0;
+  --z-raised:               10;
+  --z-table-header:         20;
+  --z-dropdown:            100;
+  --z-sticky:              200;
+  --z-offcanvas:           400;
+  --z-modal-backdrop:      500;
+  --z-modal:               510;
+  --z-drawer:              600;
+  --z-tooltip:             900;
+  --z-toast:              1000;
+
+  /* ==========================================================================
+     5. TRANSITIONS & TIMING CURVES
+     ========================================================================== */
+  --ease-standard:           cubic-bezier(0.2, 0, 0, 1);
+  --ease-in:                 cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:                cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring:             cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  --duration-instant:        75ms;
+  --duration-fast:           150ms;
+  --duration-normal:         250ms;
+  --duration-slow:           400ms;
+
+  /* ==========================================================================
+     6. SIZING & LAYOUT SPECIFICATIONS
+     ========================================================================== */
+  --layout-sidebar-width:            260px;
+  --layout-sidebar-collapsed-width:  76px;
+  --layout-intelligence-width:       360px;
+  --layout-gutter:                   24px;
+  --layout-gutter-sm:                16px;
+
+  /* Dynamic scrollbar jump compensation variable set by layout-engine.js */
+  --scrollbar-compensation:          0px;
+}

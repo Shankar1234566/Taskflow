@@ -8,15 +8,15 @@ dashboard_bp = Blueprint("dashboard", __name__)
 def get_role_scoped_task_query(current_user, team_id_override=None, all_company=False):
     """
     Returns base Task query scoped by role:
-    - Admin: All company tasks if all_company or team_id_override; otherwise organization-wide or user workspace.
+    - Admin: Global access across all company squads, or filtered by ?team_id=X.
     - Lead: All tasks strictly belonging to lead's squad (current_user.team_id).
-    - Member / Employee: All tasks strictly belonging to member's squad (current_user.team_id).
+    - Member / Employee: All tasks strictly belonging to member's squad (current_user.team_id) or assigned to them.
     """
     query = Task.query
     if team_id_override:
         query = query.filter(Task.team_id == team_id_override)
-    elif all_company and (current_user.role == "Admin" or current_user.is_admin):
-        pass
+    elif current_user.role == "Admin" or current_user.is_admin:
+        pass  # Global access for Admin
     elif current_user.role in ("Lead", "Member", "Employee") and current_user.team_id:
         query = query.filter(Task.team_id == current_user.team_id)
     else:
@@ -48,8 +48,8 @@ def dashboard_overview():
     total = q.count()
     completed = q.filter(db.or_(Task.completed.is_(True), Task.status == "Completed")).count()
     in_review = q.filter(Task.status == "In Review").count()
-    pending = total - completed
-    in_progress = pending
+    in_progress = q.filter(Task.status == "In Progress").count()
+    pending = q.filter(Task.status == "Pending").count()
     overdue = q.filter(
         Task.completed.is_(False),
         Task.status != "Completed",
@@ -99,8 +99,8 @@ def stats():
     total = q.count()
     completed = q.filter(db.or_(Task.completed.is_(True), Task.status == "Completed")).count()
     in_review = q.filter(Task.status == "In Review").count()
-    pending = total - completed
-    in_progress = pending
+    in_progress = q.filter(Task.status == "In Progress").count()
+    pending = q.filter(Task.status == "Pending").count()
     overdue = q.filter(
         Task.completed.is_(False),
         Task.status != "Completed",

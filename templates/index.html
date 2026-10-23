@@ -1,50 +1,725 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Taskflow</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-<script src="https://accounts.google.com/gsi/client" async defer></script></head>
-<body data-page="landing" data-google="{{ google_client_id }}">
-<main class="landing">
-  <section class="hero">
-    <div class="logo"><svg viewBox="0 0 24 24" width="28" height="28" fill="#2E7D32"><path d="M20 4C9 4 4 9 4 16c0 1.6.4 3 1 4 1-4 4-8 9-10-4 3-6 6-7 11 1 .6 2 1 3 1 8 0 10-8 10-18z"/></svg><span>Taskflow</span></div>
-    <h1>Small steps make big progress.</h1>
-    <p>Plan your day, track deadlines, and finish what matters. Taskflow keeps every task, priority, and due date in one calm place.</p>
-  </section>
-  <section class="card auth">
-    <div class="tabs"><button class="tab active" data-mode="login">Log in</button><button class="tab" data-mode="signup">Sign up</button></div>
-    <form id="auth-form" novalidate>
-      <label class="signup-only" hidden>Full Name<input name="username" autocomplete="name" placeholder="e.g. Alex Morgan"></label>
-      <label>Work Email<input name="email" type="email" autocomplete="email" required placeholder="name@company.com"></label>
-      <label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Minimum 8 characters"></label>
-      
-      <div class="signup-only form-field" hidden>
-        <label for="signup-role">Role Persona</label>
-        <select name="role" id="signup-role" class="auth-select">
-          <option value="Employee">Employee (Software Engineer)</option>
-          <option value="Lead">Team Lead</option>
-          <option value="Admin">Admin (Engineering Manager)</option>
-        </select>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taskflow — Enterprise Task Management & Productivity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/table.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-page="app">
+  <div class="shell" id="app-shell" data-active-view="overview">
+
+    <!-- 1. SIDEBAR NAVIGATION -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="#2E7D32">
+            <path d="M20 4C9 4 4 9 4 16c0 1.6.4 3 1 4 1-4 4-8 9-10-4 3-6 6-7 11 1 .6 2 1 3 1 8 0 10-8 10-18z"/>
+          </svg>
+          <span class="logo-text">Taskflow <b class="pro-badge">PRO</b></span>
+        </div>
       </div>
 
-      <div class="signup-only form-field" id="signup-team-wrap" hidden>
-        <label for="signup-team">Designated Team / Squad</label>
-        <select name="team_id" id="signup-team" class="auth-select">
-          <option value="">Select your Squad...</option>
-          <option value="1">Frontend Squad</option>
-          <option value="2">Backend Squad</option>
-          <option value="3">Mobile Squad</option>
-          <option value="4">QA Squad</option>
-        </select>
+      <nav aria-label="Main Navigation">
+        <div class="nav-group-label">Productivity</div>
+        <a class="active" href="#overview" data-target="overview" aria-current="page" title="Overview">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span>Overview</span>
+        </a>
+
+        <a href="#my-tasks" data-target="my-tasks" title="My Tasks">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+          </svg>
+          <span>My Tasks</span>
+          <span class="badge" id="badge-total">0</span>
+        </a>
+
+        <!-- REVIEW PIPELINE (Shown for Leads and Admins) -->
+        <a href="#review-pipeline" data-target="review-pipeline" id="nav-review" class="nav-review" title="Review Pipeline" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span>Review Pipeline</span>
+          <span class="badge purple" id="badge-review">0</span>
+        </a>
+
+        <div class="nav-group-label">Workspace</div>
+        <a href="#calendar" data-target="calendar" title="Calendar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>Calendar</span>
+        </a>
+
+        <a href="#categories" data-target="categories" title="Categories">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+          </svg>
+          <span>Categories</span>
+        </a>
+
+        <a href="#team" data-target="team" title="Team Squad">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+          <span>Team Squad</span>
+        </a>
+
+        <a href="#settings" data-target="settings" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+          <span>Settings</span>
+        </a>
+
+        <!-- ADMIN PORTAL (Shown only for Admin) -->
+        <a href="#admin" data-target="admin" id="nav-admin" class="nav-admin" title="Admin Portal" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>Admin Portal</span>
+          <span class="badge admin-pill">Admin</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <button class="kbd-btn" onclick="TaskflowAuth.logout()" title="Log out of system">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Log out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN VIEWPORT -->
+    <main class="main" id="main-view">
+
+      <!-- 2. TOP BAR -->
+      <header class="top">
+        <div class="top-left">
+          <button class="icon-btn mobile-menu-btn" id="btn-mobile-menu" aria-label="Toggle navigation drawer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div>
+            <h2 id="user-greeting">Good morning, Engineer</h2>
+            <div class="breadcrumbs">
+              <span>Enterprise Workspace</span>
+              <i>/</i>
+              <span id="user-role-badge" class="role-badge role-Member">Member</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <!-- Table Row Density Switcher -->
+          <button class="btn btn-sm" id="btn-toggle-density" title="Toggle Compact / Comfortable View">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <span>Density</span>
+          </button>
+
+          <!-- Admin Team Filter Selector -->
+          <div id="admin-team-selector-wrap" style="display: none;">
+            <select class="team-filter-select" id="filter-team">
+              <option value="">All Engineering Squads</option>
+              <option value="1">Backend Systems</option>
+              <option value="2">Frontend Core</option>
+            </select>
+          </div>
+
+          <!-- User Avatar & Logout -->
+          <button class="avatar" id="user-avatar" title="Current User">EM</button>
+          <button class="icon-btn logout-btn" onclick="TaskflowAuth.logout()" title="Log Out" aria-label="Log out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW 1: OVERVIEW & TASKS WORKSPACE -->
+      <section data-view="overview">
+        <!-- 3. METRIC SUMMARY (4 Counter Cards) -->
+        <div class="metrics">
+          <div class="card metric">
+            <div class="m-icon icon-total">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </div>
+            <div>
+              <span>Total Deliverables</span>
+              <strong id="stat-total">0</strong>
+              <small class="up">Scoped to Squad</small>
+            </div>
+          </div>
+
+          <div class="card metric">
+            <div class="m-icon icon-prog">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div>
+              <span>In Progress</span>
+              <strong id="stat-in-progress">0</strong>
+              <small class="up">Active Development</small>
+            </div>
+          </div>
+
+          <div class="card metric">
+            <div class="m-icon icon-comp">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div>
+              <span>Completed</span>
+              <strong id="stat-completed">0</strong>
+              <small class="up">Closed Deliverables</small>
+            </div>
+          </div>
+
+          <div class="card metric">
+            <div class="m-icon icon-over">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <div>
+              <span>Overdue Risk</span>
+              <strong id="stat-overdue">0</strong>
+              <small class="down">Past SLA Target</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. ACTION BAR & FILTERS -->
+        <div class="card tasks-card" style="margin-top: 20px;">
+          <div class="filters">
+            <!-- Search bar with 250ms debounce -->
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="search" id="task-search" placeholder="Search tasks by title, description or tag..." autocomplete="off">
+            </div>
+
+            <!-- Category Filter -->
+            <select id="filter-category">
+              <option value="">All Categories</option>
+              <option value="Frontend">Frontend</option>
+              <option value="Backend">Backend</option>
+              <option value="Database">Database</option>
+              <option value="Design">Design</option>
+              <option value="Meetings">Meetings</option>
+            </select>
+
+            <!-- Priority Filter -->
+            <select id="filter-priority">
+              <option value="">All Priorities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+
+            <!-- Status Filter -->
+            <select id="filter-status">
+              <option value="">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="In Review">In Review</option>
+              <option value="Completed">Completed</option>
+              <option value="Overdue">Overdue Only</option>
+            </select>
+
+            <!-- Dynamic "+ Add Task" button (Scoped to Lead / Admin) -->
+            <button class="btn primary" id="btn-add-task" style="white-space: nowrap;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>+ Add Task</span>
+            </button>
+          </div>
+
+          <!-- Active calendar filter chip if clicked -->
+          <div id="active-cal-filter-banner" style="display: none; margin-bottom: 12px; font-size: 13px;">
+            <span class="filter-chip">
+              Filtered by Deadline: <b id="active-cal-date-label"></b>
+              <button onclick="TaskflowTasks.clearDateFilter()">&times;</button>
+            </span>
+          </div>
+
+          <!-- 5. TASK TABLE -->
+          <div class="task-table-container task-table-wrap table-comfortable">
+            <table class="task-table">
+              <thead>
+                <tr>
+                  <th class="col-select" style="width: 44px;"></th>
+                  <th class="col-title">Title & Description</th>
+                  <th class="col-pipeline" style="width: 220px;">Dependency Pipeline</th>
+                  <th class="col-priority" style="width: 110px;">Priority</th>
+                  <th class="col-category" style="width: 120px;">Category</th>
+                  <th class="col-due" style="width: 130px;">Due Date</th>
+                  <th class="col-status" style="width: 130px;">Status</th>
+                  <th class="col-assignee" style="width: 160px;">Assignee</th>
+                  <th class="col-actions" style="width: 140px; text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="task-table-body">
+                <!-- Dynamically Rendered by tasks.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: MY TASKS (Directly filtered to current user) -->
+      <section data-view="my-tasks" hidden>
+        <div class="card tasks-card">
+          <div class="card-h">
+            <h3>My Assigned Deliverables</h3>
+            <p class="card-sub">Tickets directly allocated to your user account requiring implementation or proof submission.</p>
+          </div>
+          <div class="task-table-wrap">
+            <table class="task-table">
+              <thead>
+                <tr>
+                  <th style="width: 36px;"></th>
+                  <th>Title & Description</th>
+                  <th style="width: 100px;">Priority</th>
+                  <th style="width: 110px;">Category</th>
+                  <th style="width: 120px;">Due Date</th>
+                  <th style="width: 110px;">Status</th>
+                  <th style="width: 160px;">Assignee</th>
+                  <th style="width: 130px; text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="my-task-table-body">
+                <!-- Uses filteredTasks in tasks.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: LEAD REVIEW PIPELINE -->
+      <section data-view="review-pipeline" hidden>
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-h">
+            <h3>Deliverable Review Pipeline</h3>
+            <p class="card-sub">Inspect developer implementation notes, inspect Pull Request branches, review artifacts, and approve deliverables.</p>
+          </div>
+        </div>
+        <div class="review-pipeline-grid" id="review-pipeline-container">
+          <!-- Dynamically populated by tasks.js -->
+        </div>
+      </section>
+
+      <!-- VIEW 4: CATEGORIES WORKSPACE -->
+      <section data-view="categories" hidden>
+        <div class="card">
+          <div class="card-h">
+            <h3>Engineering Categories & Workload</h3>
+            <p class="card-sub">Velocity breakdowns across frontend, backend, database, design, and meetings.</p>
+          </div>
+          <div class="categories-grid" id="categories-container"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 5: CALENDAR VIEW -->
+      <section data-view="calendar" hidden>
+        <div class="card">
+          <div class="card-h">
+            <h3>Interactive Delivery Schedule</h3>
+            <p class="card-sub">Monthly roadmap showing ticket deadlines across all engineering teams.</p>
+          </div>
+          <div class="cal-days-grid" id="calendar-full-view" style="gap: 8px;"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 6: TEAM VIEW -->
+      <section data-view="team" hidden>
+        <div class="card">
+          <div class="card-h">
+            <h3>Squad Engineers & Leads</h3>
+            <p class="card-sub">Active members contributing to your assigned squad roster.</p>
+          </div>
+          <div class="categories-grid" id="team-members-container"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 7: SETTINGS VIEW -->
+      <section data-view="settings" hidden>
+        <div class="card" style="max-width: 600px;">
+          <div class="card-h">
+            <h3>Account & Preferences</h3>
+            <p class="card-sub">Configure user settings, visual theme tokens, and authentication.</p>
+          </div>
+          <div style="display: grid; gap: 14px; margin-top: 16px;">
+            <label>Full Name
+              <input type="text" id="settings-name" value="User">
+            </label>
+            <label>Email Address
+              <input type="email" id="settings-email" value="user@taskflow.local" readonly disabled>
+            </label>
+            <label>Theme Preference
+              <select id="settings-theme">
+                <option value="light">Enterprise Light Mode (Default)</option>
+                <option value="dark">Dark Theme</option>
+              </select>
+            </label>
+            <button class="btn primary" style="width: fit-content; margin-top: 8px;" onclick="alert('Settings saved.')">
+              Save Preferences
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 8: ADMIN PORTAL -->
+      <section data-view="admin" hidden>
+        <div class="card">
+          <div class="card-h">
+            <h3>Executive Command Center & Squad Governance</h3>
+            <p class="card-sub">Organization-wide analytics and cross-team task distribution.</p>
+          </div>
+          <div class="task-table-wrap" style="margin-top: 14px;">
+            <table class="task-table">
+              <thead>
+                <tr>
+                  <th>Squad Name</th>
+                  <th>Lead</th>
+                  <th>Active Tickets</th>
+                  <th>Completed</th>
+                  <th>Velocity</th>
+                </tr>
+              </thead>
+              <tbody id="admin-squads-table">
+                <tr>
+                  <td><b>Backend Systems</b></td>
+                  <td>Sarah Jenkins</td>
+                  <td>6</td>
+                  <td>1</td>
+                  <td><span class="pill p-High">17% Done</span></td>
+                </tr>
+                <tr>
+                  <td><b>Frontend Core</b></td>
+                  <td>Unassigned</td>
+                  <td>4</td>
+                  <td>1</td>
+                  <td><span class="pill p-Low">25% Done</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 6. RIGHT SIDEBAR -->
+    <aside class="right" id="right-sidebar">
+
+      <!-- Widget A: Mini Calendar with Task Deadline Dots -->
+      <div class="mini-calendar-widget">
+        <div class="cal-head">
+          <h4 id="mini-calendar-title" style="font-size: 14px; font-weight: 700;">October 2026</h4>
+          <span class="text-sm text-muted">Deadlines</span>
+        </div>
+        <div class="cal-weekdays">
+          <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+        </div>
+        <div class="cal-days-grid" id="mini-calendar-days">
+          <!-- Populated by dashboard.js -->
+        </div>
       </div>
 
-      <p id="auth-error" class="error" role="alert"></p>
-      <button class="btn primary" id="auth-submit">Log in</button>
+      <!-- Widget B: Task Progress Donut Chart (Animated SVG) -->
+      <div class="donut-card">
+        <div class="flex-between" style="margin-bottom: 12px;">
+          <h4 style="font-size: 14px; font-weight: 700;">Sprint Progress</h4>
+          <span class="badge" id="sprint-status-pill">Active</span>
+        </div>
+
+        <div class="donut-svg-wrap">
+          <svg class="donut-svg" width="130" height="130" viewBox="0 0 100 100">
+            <!-- Background track -->
+            <circle class="donut-bg-circle" cx="50" cy="50" r="40" />
+            <!-- Animated progress circle (circumference ~251.32) -->
+            <circle class="donut-progress-circle" id="donut-circle-progress" cx="50" cy="50" r="40"
+                    stroke-dasharray="251.32" stroke-dashoffset="251.32" />
+          </svg>
+          <div class="donut-center-text">
+            <span id="donut-percentage">0%</span>
+            <span class="donut-center-sub">Done</span>
+          </div>
+        </div>
+
+        <ul class="legend" style="margin-top: 14px;">
+          <li><i style="background: var(--green);"></i> Completed <b id="leg-completed">0</b></li>
+          <li><i style="background: #0284C7;"></i> In Progress <b id="leg-progress">0</b></li>
+          <li><i style="background: #7E22CE;"></i> In Review <b id="leg-review">0</b></li>
+          <li><i style="background: #DC2626;"></i> Overdue <b id="leg-overdue">0</b></li>
+        </ul>
+      </div>
+
+      <!-- Widget C: AI Productivity Assistant Card -->
+      <div class="ai-assistant-card">
+        <div class="ai-card-head">
+          <div class="ai-card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" stroke-width="2">
+              <path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 14.93V17a1 1 0 01-2 0v-.07A7 7 0 015.07 11H5a1 1 0 010-2h.07A7 7 0 0111 5.07V5a1 1 0 012 0v.07A7 7 0 0118.93 11H19a1 1 0 010 2h-.07A7 7 0 0113 16.93z"/>
+            </svg>
+            <span>Productivity AI</span>
+          </div>
+          <!-- Dynamic Model Source Badge -->
+          <span class="model-badge badge-rule_based" id="assistant-model-badge">⚡ Rule-Based Summary</span>
+        </div>
+
+        <!-- Pre-configured Query Chips -->
+        <div class="ai-chips-container">
+          <button type="button" class="assistant-chip" data-query="Which tasks are overdue?">
+            ⚠️ Overdue tasks?
+          </button>
+          <button type="button" class="assistant-chip" data-query="Summarize our team's progress.">
+            📊 Team progress
+          </button>
+          <button type="button" class="assistant-chip" data-query="Draft a weekly status report.">
+            📋 Weekly status report
+          </button>
+          <button type="button" class="assistant-chip" data-query="Break this deliverable into smaller subtasks.">
+            🔨 Break into subtasks
+          </button>
+        </div>
+
+        <!-- Assistant Response Box -->
+        <div class="ai-response-box" id="assistant-response">
+          <p class="md-p">
+            Ask me anything about team velocity, delivery risks, sprint status reports, or architectural decompositions.
+          </p>
+        </div>
+
+        <!-- Custom Query Input Form -->
+        <form id="assistant-form" class="ai-form-wrap">
+          <input type="text" id="assistant-input" class="ai-input" placeholder="Ask AI Assistant..." autocomplete="off">
+          <button type="submit" class="btn primary btn-sm" id="assistant-submit-btn">
+            Send
+          </button>
+        </form>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- 7. MODALS & DRAWERS -->
+
+  <!-- Modal A: "+ Add Task" Modal -->
+  <dialog id="modal-add-task">
+    <div class="dialog-h">
+      <h3>Create New Deliverable</h3>
+      <button class="btn-close" id="btn-close-add-modal">&times;</button>
+    </div>
+    <form id="form-add-task">
+      <label>Title
+        <input type="text" name="title" required placeholder="e.g. Implement OAuth Bearer Token Verification">
+      </label>
+
+      <label>Description
+        <textarea name="description" rows="3" placeholder="Technical specifications, acceptance criteria, or architectural context..."></textarea>
+      </label>
+
+      <div class="row">
+        <label>Category
+          <select name="category" required>
+            <option value="Frontend">Frontend</option>
+            <option value="Backend">Backend</option>
+            <option value="Database">Database</option>
+            <option value="Design">Design</option>
+            <option value="Meetings">Meetings</option>
+          </select>
+        </label>
+
+        <label>Priority
+          <select name="priority" required>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </label>
+
+        <label>Target Deadline
+          <input type="date" name="due_date">
+        </label>
+      </div>
+
+      <div class="row">
+        <label style="grid-column: span 3;">Assignee (Direct Report)
+          <select name="assigned_to_id" id="add-task-assignee" required>
+            <option value="">Select Assignee...</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn" onclick="document.getElementById('modal-add-task').close()">Cancel</button>
+        <button type="submit" class="btn primary">Create Deliverable</button>
+      </div>
     </form>
-    <div class="divider"><span>or</span></div>
-    <div id="google-btn"></div>
-    <button class="btn ghost" id="google-fallback" hidden>Continue with Google</button>
-  </section>
-</main>
-<script src="{{ url_for('static', filename='js/app.js') }}"></script></body></html>
+  </dialog>
+
+  <!-- Modal B: "Submit Proof of Work" Modal -->
+  <dialog id="modal-submit-proof">
+    <div class="dialog-h">
+      <div>
+        <h3>Submit Proof of Work</h3>
+        <p class="card-sub" id="proof-task-title" style="margin: 2px 0 0; font-weight: 600; color: var(--green);"></p>
+      </div>
+      <button class="btn-close" id="btn-close-proof-modal">&times;</button>
+    </div>
+    <form id="form-submit-proof">
+      <label>Git Pull Request or Commit URL
+        <input type="url" name="git_link" placeholder="https://github.com/company/repo/pull/123" required>
+      </label>
+
+      <label>Implementation Notes & Verification Details
+        <textarea name="notes" rows="4" required placeholder="Describe unit test results, architectural decisions, and steps to verify..."></textarea>
+      </label>
+
+      <label>Proof Attachment (Optional screenshot, test log, artifact)
+        <input type="file" name="proof_file">
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn" onclick="document.getElementById('modal-submit-proof').close()">Cancel</button>
+        <button type="submit" class="btn primary">Submit Deliverable for Review</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal C: "Lead Review Drawer" -->
+  <dialog id="drawer-lead-review" style="width: min(640px, 94vw);">
+    <div class="dialog-h">
+      <div>
+        <h3>Lead Review Pipeline</h3>
+        <span class="pill s-In-Review" style="margin-top: 4px;">Awaiting Decision</span>
+      </div>
+      <button class="btn-close" id="btn-close-review-drawer">&times;</button>
+    </div>
+
+    <div style="display: grid; gap: 14px;">
+      <div>
+        <strong style="display:block; font-size: 16px; margin-bottom: 2px;" id="review-task-title">Task Title</strong>
+        <span class="text-sm text-muted">Submitted by <b id="review-task-assignee">Engineer</b> on <span id="review-task-submitted-at">Today</span></span>
+      </div>
+
+      <!-- Submitted Git link -->
+      <div>
+        <strong style="display:block; font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;">Pull Request</strong>
+        <a href="#" target="_blank" rel="noopener" id="review-git-link" class="git-link-chip">View Git PR</a>
+      </div>
+
+      <!-- Submitted file link -->
+      <div>
+        <strong style="display:block; font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;">Attachment</strong>
+        <a href="#" target="_blank" id="review-proof-file" class="git-link-chip">Download Proof File</a>
+      </div>
+
+      <!-- Notes -->
+      <div>
+        <strong style="display:block; font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;">Engineer Notes</strong>
+        <div class="review-notes-box" id="review-submission-notes"></div>
+      </div>
+
+      <!-- Feedback textarea -->
+      <label>Reviewer Feedback / Revision Instructions
+        <textarea id="review-feedback-input" rows="3" placeholder="Provide actionable feedback or reasons if requesting changes..."></textarea>
+      </label>
+
+      <!-- Approve & Reject Action Buttons -->
+      <div class="actions" style="margin-top: 14px;">
+        <button type="button" class="btn danger" id="btn-review-reject">
+          Request Changes
+        </button>
+        <button type="button" class="btn primary" id="btn-review-approve">
+          Approve Deliverable
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal D: Task Detail Inspection Modal -->
+  <dialog id="modal-task-detail">
+    <div class="dialog-h">
+      <h3>Deliverable Details</h3>
+      <button class="btn-close" onclick="document.getElementById('modal-task-detail').close()">&times;</button>
+    </div>
+    <div class="detail-wrap">
+      <h4 class="det-title" id="detail-title"></h4>
+      <p class="det-desc" id="detail-desc"></p>
+      <div class="det-grid">
+        <div><strong>Priority</strong> <span id="detail-priority"></span></div>
+        <div><strong>Category</strong> <span id="detail-category"></span></div>
+        <div><strong>Due Date</strong> <span id="detail-due"></span></div>
+        <div><strong>Status</strong> <span id="detail-status"></span></div>
+        <div><strong>Assignee</strong> <span id="detail-assignee"></span></div>
+        <div><strong>Squad</strong> <span id="detail-team"></span></div>
+      </div>
+      <div class="det-actions">
+        <button class="btn" onclick="document.getElementById('modal-task-detail').close()">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODULAR JAVASCRIPT LIBRARIES -->
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/tasks.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/layout-engine.js') }}"></script>
+
+  <!-- APP BOOTSTRAPPER -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Verify Authentication & Update Header
+      const user = await window.TaskflowAuth.getCurrentUser();
+      if (!user) {
+        window.location.href = '/login';
+        return;
+      }
+      window.TaskflowAuth.updateTopBar(user);
+
+      // 2. Initialize Navigation Tabs & Dashboard Widgets
+      window.TaskflowDashboard.initTabs();
+      await window.TaskflowDashboard.fetchStats();
+
+      // 3. Initialize Tasks & AI Assistant
+      await window.TaskflowTasks.init();
+      window.TaskflowAssistant.init();
+    });
+  </script>
+</body>
+</html>

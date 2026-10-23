@@ -19,8 +19,8 @@ def login_required(f):
 def role_required(*allowed_roles):
     """
     Role-Based Access Control decorator.
-    Allows access if current user's role is in allowed_roles, or if user is an Admin.
-    Supports both @role_required('Admin', 'Lead') and @role_required(['Admin', 'Lead']).
+    Checks session.get('user_role') or session.get('role') in allowed_roles.
+    Admins are always authorized.
     """
     flat_roles = []
     for r in allowed_roles:
@@ -29,17 +29,17 @@ def role_required(*allowed_roles):
         else:
             flat_roles.append(r)
 
-    # Normalize aliases
-    normalized_allowed = set()
+    # Normalize roles (e.g. Employee -> Member)
+    normalized = set()
     for r in flat_roles:
         r_str = str(r).strip()
-        if r_str == "Team Lead":
-            normalized_allowed.add("Lead")
+        if r_str in ("Team Lead", "Lead"):
+            normalized.add("Lead")
         elif r_str in ("Employee", "Member"):
-            normalized_allowed.add("Employee")
-            normalized_allowed.add("Member")
+            normalized.add("Member")
+            normalized.add("Employee")
         else:
-            normalized_allowed.add(r_str)
+            normalized.add(r_str)
 
     def decorator(f):
         @wraps(f)
@@ -47,25 +47,26 @@ def role_required(*allowed_roles):
             user_id = session.get("user_id")
             if not user_id:
                 return jsonify(error="Authentication required"), 401
+
             user = db.session.get(User, user_id)
             if not user:
                 session.clear()
                 return jsonify(error="Authentication required"), 401
 
-            # Keep session roles in sync
-            session["role"] = user.role
+            # Sync session attributes
+            current_role = user.role or ("Admin" if user.is_admin else "Member")
+            session["user_role"] = current_role
+            session["role"] = current_role
             session["team_id"] = user.team_id
 
-            # Admins always pass role authorization
-            if user.role == "Admin" or user.is_admin:
+            # Admins always pass
+            if current_role == "Admin" or user.is_admin:
                 return f(*args, **kwargs)
 
-            user_role = user.role or "Member"
-            if user_role == "Team Lead":
-                user_role = "Lead"
-
-            if user_role not in normalized_allowed and not (user_role in ("Employee", "Member") and any(x in normalized_allowed for x in ("Employee", "Member"))):
+            # Check if role matches
+            if current_role not in normalized:
                 return jsonify(error=f"Forbidden. Action requires role: {', '.join(flat_roles)}."), 403
+
             return f(*args, **kwargs)
         return wrap
     return decorator

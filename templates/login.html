@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taskflow — Enterprise Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/table.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-page="login">
+  <main class="landing">
+    <!-- Left Hero Section -->
+    <section class="hero">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="#2E7D32">
+          <path d="M20 4C9 4 4 9 4 16c0 1.6.4 3 1 4 1-4 4-8 9-10-4 3-6 6-7 11 1 .6 2 1 3 1 8 0 10-8 10-18z"/>
+        </svg>
+        <span style="font-size: 22px; font-weight: 700;">Taskflow</span>
+        <span class="pro-badge">ENTERPRISE</span>
+      </div>
+      <h1>Enterprise Multi-Tier Task Management & Productivity</h1>
+      <p>
+        Unified task lifecycle tracking with granular Role-Based Access Control, 
+        verifiable proof of work submission pipelines, automated review workflows, 
+        and an integrated AI Productivity Assistant.
+      </p>
+
+      <!-- Quick 1-Click Persona Demo Cards -->
+      <div style="margin-top: 32px;">
+        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);">
+          ⚡ Quick 1-Click Demo Logins
+        </span>
+        <div class="persona-cards-grid">
+          <div class="persona-card" onclick="quickLogin('admin@taskflow.local')">
+            <span class="persona-role">👑 Admin</span>
+            <span class="persona-name">System Administrator</span>
+            <span class="persona-email">admin@taskflow.local</span>
+          </div>
+
+          <div class="persona-card" onclick="quickLogin('lead_backend@taskflow.local')">
+            <span class="persona-role">💼 Team Lead</span>
+            <span class="persona-name">Sarah Jenkins</span>
+            <span class="persona-email">lead_backend@taskflow.local</span>
+          </div>
+
+          <div class="persona-card" onclick="quickLogin('dev_backend@taskflow.local')">
+            <span class="persona-role">💻 Backend Member</span>
+            <span class="persona-name">Alex Rivera</span>
+            <span class="persona-email">dev_backend@taskflow.local</span>
+          </div>
+
+          <div class="persona-card" onclick="quickLogin('dev_frontend@taskflow.local')">
+            <span class="persona-role">🎨 Frontend Member</span>
+            <span class="persona-name">Elena Rostova</span>
+            <span class="persona-email">dev_frontend@taskflow.local</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Card: Auth Form -->
+    <section class="card auth">
+      <div class="tabs">
+        <button class="tab active" id="tab-login" onclick="switchAuthTab('login')">Log in</button>
+        <button class="tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign up</button>
+      </div>
+
+      <form id="auth-form" novalidate onsubmit="handleAuthSubmit(event)">
+        <div id="signup-fields" style="display: none;">
+          <label>Full Name
+            <input type="text" name="username" id="auth-username" placeholder="e.g. Maya Lin" autocomplete="name">
+          </label>
+          <div style="margin-top: 10px;">
+            <label>Role Persona
+              <select name="role" id="auth-role">
+                <option value="Member">Member (Software Engineer)</option>
+                <option value="Lead">Team Lead</option>
+                <option value="Admin">Admin (Engineering Manager)</option>
+              </select>
+            </label>
+          </div>
+          <div style="margin-top: 10px;">
+            <label>Assigned Squad
+              <select name="team_id" id="auth-team">
+                <option value="1">Backend Systems</option>
+                <option value="2">Frontend Core</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label>Work Email
+            <input type="email" name="email" id="auth-email" required placeholder="name@company.com" autocomplete="email">
+          </label>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label>Password
+            <input type="password" name="password" id="auth-password" required minlength="8" placeholder="Minimum 8 characters" autocomplete="current-password">
+          </label>
+        </div>
+
+        <p id="auth-error" class="error" role="alert" style="margin: 8px 0 0;"></p>
+
+        <button type="submit" class="btn primary" id="auth-submit-btn" style="width: 100%; justify-content: center; margin-top: 14px;">
+          Log in
+        </button>
+      </form>
+
+      <div style="text-align: center; font-size: 12px; color: var(--muted); margin-top: 12px;">
+        Default seeded password for all demo accounts: <code style="font-weight: 700;">password123</code>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script>
+    let authMode = 'login';
+
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const tabLogin = document.getElementById('tab-login');
+      const tabSignup = document.getElementById('tab-signup');
+      const signupFields = document.getElementById('signup-fields');
+      const submitBtn = document.getElementById('auth-submit-btn');
+      const errorEl = document.getElementById('auth-error');
+
+      errorEl.textContent = '';
+
+      if (mode === 'login') {
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+        signupFields.style.display = 'none';
+        submitBtn.textContent = 'Log in';
+      } else {
+        tabLogin.classList.remove('active');
+        tabSignup.classList.add('active');
+        signupFields.style.display = 'block';
+        submitBtn.textContent = 'Create Enterprise Account';
+      }
+    }
+
+    async function quickLogin(email) {
+      const errorEl = document.getElementById('auth-error');
+      errorEl.textContent = '';
+      try {
+        await window.TaskflowAuth.demoLogin(email);
+        window.location.href = '/';
+      } catch (err) {
+        errorEl.textContent = err.message || 'Login failed.';
+      }
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const errorEl = document.getElementById('auth-error');
+      errorEl.textContent = '';
+
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+
+      if (!email || !password) {
+        errorEl.textContent = 'Please provide both email and password.';
+        return;
+      }
+
+      if (authMode === 'login') {
+        try {
+          await window.TaskflowAuth.login(email, password);
+          window.location.href = '/';
+        } catch (err) {
+          errorEl.textContent = err.message || 'Login failed.';
+        }
+      } else {
+        const username = document.getElementById('auth-username').value.trim();
+        const role = document.getElementById('auth-role').value;
+        const team_id = document.getElementById('auth-team').value;
+
+        if (!username) {
+          errorEl.textContent = 'Please enter your full name.';
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password, role, team_id })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            errorEl.textContent = data.error || 'Registration failed.';
+            return;
+          }
+          window.location.href = '/';
+        } catch (err) {
+          errorEl.textContent = err.message || 'Registration failed.';
+        }
+      }
+    }
+  </script>
+</body>
+</html>

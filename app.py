@@ -20,6 +20,7 @@ def create_app(config_class=Config):
     from routes.admin import admin_bp
     from routes.activity import activity_bp
     from routes.teams import teams_bp
+    from routes.assistant import assistant_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(tasks_bp, url_prefix="/api/tasks")
@@ -27,6 +28,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(activity_bp, url_prefix="/api/activity")
     app.register_blueprint(teams_bp, url_prefix="/api/teams")
+    app.register_blueprint(assistant_bp, url_prefix="/api/assistant")
 
     # Team members alias endpoint (/api/team/members and /api/teams/members)
     @app.route("/api/team/members", methods=["GET"])
@@ -36,16 +38,22 @@ def create_app(config_class=Config):
 
     # Frontend Page Routes
     @app.route("/")
-    def landing():
+    def index():
+        if not session.get("user_id"):
+            return redirect(url_for("login_page"))
+        return render_template("index.html")
+
+    @app.route("/login")
+    def login_page():
         if session.get("user_id"):
-            return redirect(url_for("dashboard"))
-        return render_template("index.html", google_client_id=app.config.get("GOOGLE_CLIENT_ID", ""))
+            return redirect(url_for("index"))
+        return render_template("login.html")
 
     @app.route("/dashboard")
     def dashboard():
         if not session.get("user_id"):
-            return redirect(url_for("landing"))
-        return render_template("dashboard.html", google_client_id=app.config.get("GOOGLE_CLIENT_ID", ""))
+            return redirect(url_for("login_page"))
+        return redirect(url_for("index"))
 
     # Generic JSON error handlers
     @app.errorhandler(400)
@@ -79,10 +87,13 @@ def create_app(config_class=Config):
 
         # Bootstrap: If no admin exists in the system, promote first user to admin
         if not app.config.get("TESTING"):
-            first_user = User.query.first()
-            if first_user and not User.query.filter_by(is_admin=True).first():
-                first_user.is_admin = True
-                db.session.commit()
+            try:
+                first_user = User.query.first()
+                if first_user and not User.query.filter_by(is_admin=True).first():
+                    first_user.is_admin = True
+                    db.session.commit()
+            except Exception:
+                pass
 
     return app
 

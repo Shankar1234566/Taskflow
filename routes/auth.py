@@ -74,6 +74,7 @@ def register_user():
 
     session["user_id"] = user.id
     session["role"] = user.role
+    session["user_role"] = user.role
     session["team_id"] = user.team_id
     return jsonify(user=user.to_dict(), message="Account created successfully."), 201
 
@@ -100,6 +101,7 @@ def login():
 
     session["user_id"] = user.id
     session["role"] = user.role
+    session["user_role"] = user.role
     session["team_id"] = user.team_id
     return jsonify(user=user.to_dict(), message="Login successful."), 200
 

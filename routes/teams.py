@@ -6,6 +6,7 @@ teams_bp = Blueprint("teams", __name__)
 
 @teams_bp.get("")
 @teams_bp.get("/")
+@role_required("Admin")
 def list_teams():
     """List all company squads / teams."""
     teams = Team.query.order_by(Team.name.asc()).all()
@@ -59,7 +60,7 @@ def get_team_members():
     elif user.team_id:
         query = query.filter_by(team_id=user.team_id)
 
-    members = query.order_by(User.name.asc()).all()
+    members = query.order_by(User.username.asc()).all()
     out = []
     for m in members:
         team_name = m.team.name if m.team else "Unassigned Squad"

@@ -28,6 +28,10 @@ def apply_migrations(db_path):
         cursor.execute("PRAGMA table_info(users)")
         user_cols = {row[1] for row in cursor.fetchall()}
 
+        if "username" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN username VARCHAR(80) DEFAULT 'User'")
+            if "name" in user_cols:
+                cursor.execute("UPDATE users SET username = name WHERE name IS NOT NULL")
         if "is_admin" not in user_cols:
             cursor.execute("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0 NOT NULL")
         if "theme_preference" not in user_cols:

@@ -1,0 +1,542 @@
+/**
+ * TASKFLOW HIGH-DENSITY DATA TABLE & PIPELINE COMPONENT
+ * static/css/components/table.css
+ *
+ * Strict column width allocations, auto-truncation, density switcher,
+ * pixel-perfect inline-flex status & priority badges with SVG icons,
+ * distinct animated dashed blocked row state, and horizontal pipeline dependency stepper.
+ */
+
+@import url('../tokens.css');
+
+/* ==========================================================================
+   1. TABLE CONTAINER & HORIZONTAL SCROLL ISOLATION
+   ========================================================================== */
+.task-table-container,
+.task-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+.task-table-container::-webkit-scrollbar,
+.task-table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+.task-table-container::-webkit-scrollbar-thumb,
+.task-table-wrap::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+
+.task-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: var(--font-size-base);
+  min-width: 980px; /* Enforces horizontal scroll readability without column collapse */
+}
+
+/* ==========================================================================
+   2. COLUMN WIDTH ALLOCATIONS (Defensive Sizing)
+   ========================================================================== */
+.task-table th.col-select,
+.task-table td.col-select {
+  width: 44px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.task-table th.col-title,
+.task-table td.col-title {
+  min-width: 260px;
+}
+
+.task-table th.col-pipeline,
+.task-table td.col-pipeline {
+  width: 220px;
+  min-width: 220px;
+}
+
+.task-table th.col-priority,
+.task-table td.col-priority {
+  width: 110px;
+  min-width: 110px;
+}
+
+.task-table th.col-category,
+.task-table td.col-category {
+  width: 120px;
+  min-width: 120px;
+}
+
+.task-table th.col-due,
+.task-table td.col-due {
+  width: 130px;
+  min-width: 130px;
+}
+
+.task-table th.col-status,
+.task-table td.col-status {
+  width: 130px;
+  min-width: 130px;
+}
+
+.task-table th.col-assignee,
+.task-table td.col-assignee {
+  width: 160px;
+  min-width: 160px;
+}
+
+.task-table th.col-actions,
+.task-table td.col-actions {
+  width: 140px;
+  min-width: 140px;
+  text-align: right;
+}
+
+/* Sticky Header */
+.task-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-table-header);
+  background: var(--color-canvas-subtle);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   3. ROW DENSITY & HOVER STATES
+   ========================================================================== */
+.task-row td {
+  padding: 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  vertical-align: middle;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+/* Comfortable Mode (Default) */
+.table-comfortable .task-row td {
+  padding: 14px;
+}
+
+/* Compact Mode (High-Density View) */
+.table-dense .task-row td {
+  padding: 8px 12px;
+  font-size: var(--font-size-sm);
+}
+
+.table-dense .task-title-text {
+  font-size: var(--font-size-sm);
+}
+
+.table-dense .task-desc-text {
+  display: none !important; /* Conceals secondary notes in compact mode */
+}
+
+.table-dense .pill {
+  height: 20px;
+  font-size: 11px;
+  padding: 0 8px;
+}
+
+.task-row:hover td {
+  background-color: var(--color-surface-hover);
+}
+
+.task-row.task-done td {
+  background-color: #FAFAFA;
+}
+
+.task-row.task-done .task-title-text {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+/* ==========================================================================
+   4. DEFENSIVE TEXT TRUNCATION & TITLE WRAPPER
+   ========================================================================== */
+.task-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.task-title-text {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Auto-truncation */
+  cursor: pointer;
+  display: block;
+  max-width: 320px;
+}
+
+.task-title-text:hover {
+  color: var(--color-brand-primary);
+}
+
+.task-desc-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Auto-truncation */
+  margin: 0;
+  display: block;
+  max-width: 320px;
+}
+
+.git-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border);
+  color: #0369A1;
+  border-radius: var(--radius-xs);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  width: fit-content;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.git-link-chip:hover {
+  background: #E0F2FE;
+  border-color: #BAE6FD;
+}
+
+/* Checkbox alignment */
+.col-select input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-brand-primary);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* ==========================================================================
+   5. PIXEL-PERFECT INLINE-FLEX BADGES WITH MATCHING ICONS
+   ========================================================================== */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  white-space: nowrap;
+  vertical-align: middle;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.pill svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* Status Badges */
+.pill.s-Pending {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-fg);
+  border-color: var(--color-warning-border);
+}
+
+.pill.s-In-Progress,
+.pill.s-In {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-fg);
+  border-color: var(--color-info-border);
+}
+
+.pill.s-In-Review,
+.pill.s-Review {
+  background-color: var(--color-review-bg);
+  color: var(--color-review-fg);
+  border-color: var(--color-review-border);
+}
+
+.pill.s-Completed {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-fg);
+  border-color: var(--color-success-border);
+}
+
+.pill.s-Overdue {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-fg);
+  border-color: var(--color-error-border);
+}
+
+/* Priority Badges */
+.pill.p-Critical {
+  background-color: var(--color-priority-critical-bg);
+  color: var(--color-priority-critical-fg);
+  border-color: var(--color-priority-critical-border);
+}
+
+.pill.p-High {
+  background-color: var(--color-priority-high-bg);
+  color: var(--color-priority-high-fg);
+  border-color: var(--color-priority-high-border);
+}
+
+.pill.p-Medium {
+  background-color: var(--color-priority-medium-bg);
+  color: var(--color-priority-medium-fg);
+  border-color: var(--color-priority-medium-border);
+}
+
+.pill.p-Low {
+  background-color: var(--color-priority-low-bg);
+  color: var(--color-priority-low-fg);
+  border-color: var(--color-priority-low-border);
+}
+
+/* Category Badges */
+.pill.c-Frontend {
+  background-color: var(--color-cat-frontend-bg);
+  color: var(--color-cat-frontend-fg);
+  border-color: var(--color-cat-frontend-border);
+}
+
+.pill.c-Backend {
+  background-color: var(--color-cat-backend-bg);
+  color: var(--color-cat-backend-fg);
+  border-color: var(--color-cat-backend-border);
+}
+
+.pill.c-Database {
+  background-color: var(--color-cat-database-bg);
+  color: var(--color-cat-database-fg);
+  border-color: var(--color-cat-database-border);
+}
+
+.pill.c-Design {
+  background-color: var(--color-cat-design-bg);
+  color: var(--color-cat-design-fg);
+  border-color: var(--color-cat-design-border);
+}
+
+.pill.c-Meetings {
+  background-color: var(--color-cat-meetings-bg);
+  color: var(--color-cat-meetings-fg);
+  border-color: var(--color-cat-meetings-border);
+}
+
+/* Due Date Display */
+.due-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   6. DISTINCT BLOCKED ROW STATE (Animated Dashed Outline & Amber Tint)
+   ========================================================================== */
+.task-row.task-blocked td {
+  background-color: #FFFBEB !important;
+}
+
+.task-row.task-blocked td:first-child {
+  border-left: 3px solid var(--color-error-solid);
+}
+
+.badge-blocked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px dashed #EF4444;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  animation: pulse-blocker 2s infinite ease-in-out;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-blocker {
+  0%, 100% { border-color: #EF4444; opacity: 1; }
+  50%      { border-color: #F87171; opacity: 0.8; }
+}
+
+/* ==========================================================================
+   7. HORIZONTAL PIPELINE DEPENDENCY STEPPER
+   ========================================================================== */
+.pipeline-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-2xs);
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 3px 8px;
+  max-width: 100%;
+  white-space: nowrap;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.step-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.step-node svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.step-node.completed {
+  color: var(--color-success-fg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.step-node.in-progress {
+  color: var(--color-info-fg);
+  font-weight: var(--font-weight-bold);
+  position: relative;
+}
+
+.step-node.in-progress .pulse-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-info-solid);
+  border-radius: 50%;
+  display: inline-block;
+  animation: step-pulse 1.5s infinite;
+}
+
+@keyframes step-pulse {
+  0%   { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); }
+  70%  { transform: scale(1);   box-shadow: 0 0 0 6px rgba(14, 165, 233, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+}
+
+.step-node.blocked {
+  color: var(--color-error-fg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.step-arrow {
+  color: var(--color-border-strong);
+  font-size: 10px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   8. ASSIGNEE & ACTION BUTTON WRAPPERS
+   ========================================================================== */
+.assignee-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.avatar-sm {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--color-brand-primary);
+  color: var(--color-text-inverse);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.assignee-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-action-btns {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.task-action-btns .btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+}
+
+.proof-tag-btn {
+  background: var(--color-review-bg);
+  border: 1px solid var(--color-review-border);
+  color: var(--color-review-fg);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.proof-tag-btn:hover {
+  background: #E9D5FF;
+}
+
+.empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
