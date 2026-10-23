@@ -1,0 +1,89 @@
+/* Taskflow Enterprise Kanban Styles */
+.kanban-board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.kanban-column {
+  background: var(--surface-card, #F4EFEA);
+  border: 1px solid var(--border, #EDE6DC);
+  border-radius: var(--radius-lg, 12px);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 180px);
+}
+
+.kanban-column-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #EDE6DC);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kanban-column-header.wip-exceeded {
+  background: rgba(188, 108, 37, 0.1);
+  color: #BC6C25;
+}
+
+.kanban-cards-dropzone {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 200px;
+}
+
+.kanban-cards-dropzone.drag-hover {
+  background: rgba(78, 107, 86, 0.08);
+  border: 2px dashed var(--accent-primary, #4E6B56);
+  border-radius: var(--radius-md, 8px);
+}
+
+.kanban-card {
+  background: var(--surface-primary, #FFFFFF);
+  border: 1px solid var(--border, #EDE6DC);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px;
+  cursor: grab;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kanban-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md, 0 4px 6px rgba(0,0,0,0.07));
+}
+
+.kanban-card.dragging {
+  opacity: 0.4;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1C2826);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-muted, #6E7A77);
+}

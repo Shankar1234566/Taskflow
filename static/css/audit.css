@@ -1,0 +1,65 @@
+/* Taskflow Audit Trail & Compliance Styles */
+.audit-log-container {
+  background: var(--surface-card, #F4EFEA);
+  border: 1px solid var(--border, #EDE6DC);
+  border-radius: var(--radius-lg, 12px);
+  padding: 20px;
+}
+
+.audit-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+}
+
+.audit-timeline::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 20px;
+  width: 2px;
+  background: var(--border, #EDE6DC);
+}
+
+.audit-timeline-item {
+  position: relative;
+  padding-left: 48px;
+  margin-bottom: 20px;
+}
+
+.timeline-icon {
+  position: absolute;
+  left: 10px;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-primary, #4E6B56);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.audit-event-card {
+  background: var(--surface-primary, #FFFFFF);
+  border: 1px solid var(--border, #EDE6DC);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 16px;
+}
+
+.audit-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted, #6E7A77);
+  margin-bottom: 4px;
+}
+
+.audit-action {
+  font-weight: 600;
+  color: var(--text-primary, #1C2826);
+}

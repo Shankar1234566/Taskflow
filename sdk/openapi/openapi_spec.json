@@ -1,0 +1,333 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Taskflow Pro Enterprise REST API",
+    "version": "2.5.0",
+    "description": "Comprehensive specification for Taskflow task orchestration, RBAC, dashboards, and integrations."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "Authenticate user session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session successfully created"
+          },
+          "401": {
+            "description": "Invalid email or password"
+          }
+        }
+      }
+    },
+    "/api/tasks/": {
+      "get": {
+        "summary": "List tasks with filtering and search",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of task items"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create new task",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "Critical",
+                      "High",
+                      "Medium",
+                      "Low"
+                    ]
+                  },
+                  "due_date": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Task created successfully"
+          }
+        }
+      }
+    },
+    "/api/dashboard/": {
+      "get": {
+        "summary": "Get aggregate KPIs and completion percentages",
+        "responses": {
+          "200": {
+            "description": "Dashboard KPI metrics"
+          }
+        }
+      }
+    },
+    "/api/team/members": {
+      "get": {
+        "summary": "List team directory",
+        "responses": {
+          "200": {
+            "description": "Team member array"
+          }
+        }
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "summary": "Admin system-wide performance statistics",
+        "responses": {
+          "200": {
+            "description": "System-wide metrics"
+          },
+          "403": {
+            "description": "Forbidden for non-administrators"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "get": {
+        "summary": "Inspect /api/auth/register",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/auth/register",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Inspect /api/auth/me",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/auth/me",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "get": {
+        "summary": "Inspect /api/auth/logout",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/auth/logout",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/tasks/{id}": {
+      "get": {
+        "summary": "Inspect /api/tasks/{id}",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/tasks/{id}",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/tasks/{id}/complete": {
+      "get": {
+        "summary": "Inspect /api/tasks/{id}/complete",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/tasks/{id}/complete",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/tasks/{id}/star": {
+      "get": {
+        "summary": "Inspect /api/tasks/{id}/star",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/tasks/{id}/star",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/assistant/query": {
+      "get": {
+        "summary": "Inspect /api/assistant/query",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/assistant/query",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/activity": {
+      "get": {
+        "summary": "Inspect /api/activity",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/activity",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "Inspect /api/admin/users",
+        "responses": {
+          "200": {
+            "description": "Success response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Mutate /api/admin/users",
+        "responses": {
+          "200": {
+            "description": "Mutation accepted"
+          }
+        }
+      }
+    }
+  }
+}
