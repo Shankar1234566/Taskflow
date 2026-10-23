@@ -14,9 +14,10 @@ class Task(db.Model):
     priority = db.Column(db.String(20), default="Medium", nullable=False)  # 'High', 'Medium', 'Low'
     status = db.Column(db.String(30), default="Pending", nullable=False)  # 'Pending', 'In Progress', 'In Review', 'Completed'
     due_date = db.Column(db.String(20), nullable=True)  # Format 'YYYY-MM-DD'
+    due_time = db.Column(db.String(10), nullable=True)  # Format 'HH:MM'
 
     # Enterprise hierarchy foreign keys
-    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"), nullable=False, index=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="SET NULL"), nullable=True, index=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     assigned_to_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
@@ -52,7 +53,7 @@ class Task(db.Model):
             return "In Review"
         if self.due_date:
             try:
-                task_date = date.fromisoformat(self.due_date[:10])
+                task_date = date.fromisoformat(str(self.due_date)[:10])
                 if task_date < date.today():
                     return "Overdue"
             except (ValueError, TypeError):
@@ -66,7 +67,7 @@ class Task(db.Model):
         if not self.due_date:
             return False
         try:
-            task_date = date.fromisoformat(self.due_date[:10])
+            task_date = date.fromisoformat(str(self.due_date)[:10])
             return task_date < date.today()
         except (ValueError, TypeError):
             return False
@@ -104,7 +105,8 @@ class Task(db.Model):
             "status": effective_status,
             "computed_status": computed_status,
             "is_overdue": self.is_overdue,
-            "due_date": self.due_date,
+            "due_date": str(self.due_date) if self.due_date else None,
+            "due_time": self.due_time,
             "team_id": self.team_id,
             "team_name": team_name,
             "created_by_id": self.created_by_id,

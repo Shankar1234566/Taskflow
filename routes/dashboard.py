@@ -8,21 +8,23 @@ dashboard_bp = Blueprint("dashboard", __name__)
 def get_role_scoped_task_query(current_user, team_id_override=None, all_company=False):
     """
     Returns base Task query scoped by role:
-    - Admin: Global access across all company squads, or filtered by ?team_id=X.
+    - Admin: Global access across all company squads if all_company is True, or filtered by team_id_override.
+             Otherwise scoped to tasks assigned to or created by current_user.
     - Lead: All tasks strictly belonging to lead's squad (current_user.team_id).
     - Member / Employee: All tasks strictly belonging to member's squad (current_user.team_id) or assigned to them.
     """
     query = Task.query
     if team_id_override:
         query = query.filter(Task.team_id == team_id_override)
-    elif current_user.role == "Admin" or current_user.is_admin:
-        pass  # Global access for Admin
+    elif all_company and (current_user.role == "Admin" or current_user.is_admin):
+        pass  # Global access for Admin across all company
     elif current_user.role in ("Lead", "Member", "Employee") and current_user.team_id:
         query = query.filter(Task.team_id == current_user.team_id)
     else:
         query = query.filter(db.or_(
             Task.assigned_to_id == current_user.id,
-            Task.user_id == current_user.id
+            Task.user_id == current_user.id,
+            Task.created_by_id == current_user.id
         ))
     return query
 
@@ -49,7 +51,7 @@ def dashboard_overview():
     completed = q.filter(db.or_(Task.completed.is_(True), Task.status == "Completed")).count()
     in_review = q.filter(Task.status == "In Review").count()
     in_progress = q.filter(Task.status == "In Progress").count()
-    pending = q.filter(Task.status == "Pending").count()
+    pending = total - completed
     overdue = q.filter(
         Task.completed.is_(False),
         Task.status != "Completed",
@@ -91,7 +93,7 @@ def stats():
 
     args = request.args
     team_id_arg = args.get("team_id", type=int)
-    all_arg = args.get("all", "").lower() in ("true", "1")
+    all_arg = args.get("all", "").lower() in ("true", "1") or (user.role == "Admin" or user.is_admin)
     today = date.today()
     one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     q = get_role_scoped_task_query(user, team_id_arg, all_arg)
@@ -202,23 +204,26 @@ def upcoming():
     today = date.today()
     first_of_month = today.replace(day=1)
     next_month = (first_of_month + timedelta(days=32)).replace(day=1)
+    first_of_month_str = first_of_month.isoformat()
+    next_month_str = next_month.isoformat()
+    today_str = today.isoformat()
 
     q = get_role_scoped_task_query(user)
     month_tasks = q.filter(
         Task.completed.is_(False),
         Task.status != "Completed",
         Task.due_date.is_not(None),
-        Task.due_date >= first_of_month,
-        Task.due_date < next_month
+        Task.due_date >= first_of_month_str,
+        Task.due_date < next_month_str
     ).all()
 
-    due_dates = sorted(list({t.due_date.isoformat() for t in month_tasks if t.due_date}))
+    due_dates = sorted(list({(t.due_date.isoformat() if hasattr(t.due_date, 'isoformat') else str(t.due_date)[:10]) for t in month_tasks if t.due_date}))
 
     upcoming_list = q.filter(
         Task.completed.is_(False),
         Task.status != "Completed",
         Task.due_date.is_not(None),
-        Task.due_date >= today
+        Task.due_date >= today_str
     ).order_by(Task.due_date.asc()).limit(5).all()
 
     return jsonify(
