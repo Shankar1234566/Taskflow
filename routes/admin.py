@@ -1,8 +1,9 @@
 from functools import wraps
 from datetime import date
 from flask import Blueprint, session, jsonify, request
-from models import db, User, Task, ActivityLog
+from models import db, User, Task, Team, ActivityLog
 from routes.auth import login_required
+from utils.validation import parse_optional_id
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -93,8 +94,14 @@ def set_user_role(user_id):
         return jsonify(error="User not found."), 404
 
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify(error="Invalid request payload. Expected JSON object."), 400
     new_role = data.get("role")
-    new_team_id = data.get("team_id")
+    new_team_id, error = parse_optional_id(data.get("team_id"), "Team ID")
+    if error:
+        return jsonify(error=error), 400
+    if new_team_id and not db.session.get(Team, new_team_id):
+        return jsonify(error="Team not found."), 404
 
     if new_role in ("Admin", "Lead", "Member"):
         target_user.role = new_role

@@ -54,6 +54,18 @@ def test_prevent_self_demotion(auth_user):
     assert res.status_code == 400
     assert "Cannot remove admin status from your own" in res.get_json()["error"]
 
+def test_admin_role_update_rejects_invalid_team_id(auth_user, second_user):
+    client = auth_user["client"]
+    target_id = second_user["user"]["id"]
+
+    invalid_id = client.post(f"/api/admin/users/{target_id}/role", json={"team_id": "not-an-id"})
+    assert invalid_id.status_code == 400
+    assert invalid_id.get_json()["error"] == "Team ID must be a positive integer."
+
+    missing_team = client.post(f"/api/admin/users/{target_id}/role", json={"team_id": 999999})
+    assert missing_team.status_code == 404
+    assert missing_team.get_json()["error"] == "Team not found."
+
 def test_admin_delete_user(auth_user, second_user):
     """Admin can delete another user and their tasks."""
     admin_client = auth_user["client"]

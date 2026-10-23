@@ -47,6 +47,28 @@ def test_task_input_validation(auth_user):
     assert res.status_code == 400
     assert "Due date must be in YYYY-MM-DD" in res.get_json()["error"]
 
+    # Invalid relationship IDs must be rejected instead of raising an exception.
+    for field in ("team_id", "assigned_to_id"):
+        res = client.post("/api/tasks", json={"title": "Invalid ID", field: "not-an-id"})
+        assert res.status_code == 400
+        assert "positive integer" in res.get_json()["error"]
+
+    res = client.post("/api/tasks", json={"title": "Invalid Team", "team_id": 999999})
+    assert res.status_code == 404
+    assert res.get_json()["error"] == "Team not found."
+
+def test_task_update_rejects_invalid_relationship_ids(auth_user):
+    client = auth_user["client"]
+    task = client.post("/api/tasks", json={"title": "Update relationship"}).get_json()["task"]
+
+    invalid_id = client.put(f"/api/tasks/{task['id']}", json={"team_id": "not-an-id"})
+    assert invalid_id.status_code == 400
+    assert "positive integer" in invalid_id.get_json()["error"]
+
+    missing_team = client.put(f"/api/tasks/{task['id']}", json={"team_id": 999999})
+    assert missing_team.status_code == 404
+    assert missing_team.get_json()["error"] == "Team not found."
+
 def test_prevent_mass_assignment(auth_user, second_user):
     """Ensure user_id cannot be spoofed to assign tasks to someone else."""
     client = auth_user["client"]
@@ -277,4 +299,3 @@ def test_bulk_complete_and_delete(auth_user):
     # Verify both are deleted
     assert client.get(f"/api/tasks/{t1['id']}").status_code == 404
     assert client.get(f"/api/tasks/{t2['id']}").status_code == 404
-

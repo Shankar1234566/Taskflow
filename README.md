@@ -55,7 +55,7 @@
 - **Security & Password Hashing**: Werkzeug Security Utilities (`generate_password_hash`, `check_password_hash`)
 - **Authentication**: Secure Flask HTTP-only Sessions (`SESSION_COOKIE_HTTPONLY=True`, `SESSION_COOKIE_SAMESITE="Lax"`)
 - **Frontend**: Semantic HTML5, Vanilla CSS3 with CSS variables (Light/Dark themes), Vanilla ES6+ JavaScript
-- **Testing**: pytest 9.1+ with in-memory SQLite isolation (38 test cases)
+- **Testing**: pytest 9.1+ with in-memory SQLite isolation (51 test cases)
 
 ---
 
@@ -67,7 +67,7 @@ Open **PowerShell** in the project directory:
 # 1. Activate the Python virtual environment
 .\.venv\Scripts\Activate.ps1
 
-# 2. Run automated tests (38 tests)
+# 2. Run automated tests (51 tests)
 pytest -v
 
 # 3. Start the application
@@ -128,12 +128,13 @@ Run the full pytest suite:
 pytest -v
 ```
 
-**Test Suite Breakdown (38 Tests, 100% Passing)**:
-- `tests/test_auth.py`: Registration, duplicate check, validation, login, wrong password, `/me`, logout, profile update, password change (12 tests).
-- `tests/test_tasks.py`: Create, input validation, mass assignment prevention, filters, updates, completion toggle, deletion, cross-user isolation, critical priority, tags, star, duplicate, bulk actions (13 tests).
+**Test Suite Breakdown (51 Tests, 100% Passing)**:
+- `tests/test_auth.py`: Registration, duplicate check, validation, login, wrong password, `/me`, logout, profile update, password change (13 tests).
+- `tests/test_tasks.py`: Create, input validation, mass assignment prevention, filters, updates, completion toggle, deletion, cross-user isolation, critical priority, tags, star, duplicate, bulk actions (14 tests).
 - `tests/test_dashboard.py`: Statistics calculation, user isolation, calendar upcoming, auth rejection (4 tests).
-- `tests/test_admin.py`: Admin stats, users directory, 403 forbidden on regular users, role toggle, self-demotion prevention, user deletion, self-deletion prevention (7 tests).
+- `tests/test_admin.py`: Admin stats, users directory, 403 forbidden on regular users, role toggle, self-demotion prevention, role update validation, user deletion, self-deletion prevention (8 tests).
 - `tests/test_activity.py`: Audit trail logging on actions, clearing activity history (2 tests).
+- `tests/test_enterprise.py`: Team hierarchy, assignments, proof submission, review workflow, team scoping, and role validation (10 tests).
 
 ---
 

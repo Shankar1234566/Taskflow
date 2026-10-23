@@ -30,6 +30,17 @@
   padding: 32px;
 }
 
+.hero .logo {
+  gap: 12px;
+  font-size: 60px;
+}
+
+.hero .logo svg {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+}
+
 .hero h1 {
   font-size: 40px;
   margin: 28px 0 16px;
@@ -486,4 +497,11 @@
   color: var(--color-text-primary);
   line-height: var(--line-height-normal);
   border: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .landing { grid-template-columns: 1fr; gap: 24px; }
+  .hero .logo { font-size: 44px; }
+  .hero .logo svg { width: 52px; height: 52px; }
+  .hero h1 { font-size: 36px; }
 }

@@ -1,6 +1,7 @@
 from flask import Blueprint, session, jsonify, request
 from models import db, Team, User, Task
 from utils.auth_decorators import login_required, role_required
+from utils.validation import parse_optional_id
 
 teams_bp = Blueprint("teams", __name__)
 
@@ -81,14 +82,21 @@ def get_team_members():
 def create_team():
     """Admin endpoint to create a new squad / department."""
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify(error="Invalid request payload. Expected JSON object."), 400
     name = (data.get("name") or "").strip()
-    lead_id = data.get("lead_id")
+    lead_id, error = parse_optional_id(data.get("lead_id"), "Lead ID")
+    if error:
+        return jsonify(error=error), 400
 
     if not name:
         return jsonify(error="Team name is required."), 400
 
     if Team.query.filter_by(name=name).first():
         return jsonify(error="A squad with this name already exists."), 409
+
+    if lead_id and not db.session.get(User, lead_id):
+        return jsonify(error="Lead user not found."), 404
 
     team = Team(name=name[:50], lead_id=lead_id)
     db.session.add(team)
@@ -113,22 +121,39 @@ def reassign_team(team_id):
         return jsonify(error="Squad not found."), 404
 
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify(error="Invalid request payload. Expected JSON object."), 400
     if "lead_id" in data:
-        new_lead_id = data.get("lead_id")
+        new_lead_id, error = parse_optional_id(data.get("lead_id"), "Lead ID")
+        if error:
+            return jsonify(error=error), 400
+        if new_lead_id and not db.session.get(User, new_lead_id):
+            return jsonify(error="Lead user not found."), 404
         team.lead_id = new_lead_id
         if new_lead_id:
             lead_user = db.session.get(User, new_lead_id)
-            if lead_user:
-                lead_user.team_id = team.id
-                if lead_user.role != "Admin":
-                    lead_user.role = "Lead"
+            lead_user.team_id = team.id
+            if lead_user.role != "Admin":
+                lead_user.role = "Lead"
 
     # Reallocate tasks from this squad to another squad
     if "target_team_id" in data and "task_ids" in data:
-        target_team_id = data.get("target_team_id")
+        target_team_id, error = parse_optional_id(data.get("target_team_id"), "Team ID")
+        if error or target_team_id is None:
+            return jsonify(error=error or "Team ID is required."), 400
+        if not db.session.get(Team, target_team_id):
+            return jsonify(error="Target team not found."), 404
         task_ids = data.get("task_ids") or []
-        if isinstance(task_ids, list) and target_team_id:
-            Task.query.filter(Task.id.in_(task_ids)).update({Task.team_id: target_team_id}, synchronize_session=False)
+        if not isinstance(task_ids, list):
+            return jsonify(error="Task IDs must be a list."), 400
+        parsed_task_ids = []
+        for task_id in task_ids:
+            parsed_task_id, error = parse_optional_id(task_id, "Task ID")
+            if error or parsed_task_id is None:
+                return jsonify(error=error or "Task ID is required."), 400
+            parsed_task_ids.append(parsed_task_id)
+        if parsed_task_ids:
+            Task.query.filter(Task.id.in_(parsed_task_ids)).update({Task.team_id: target_team_id}, synchronize_session=False)
 
     db.session.commit()
     return jsonify(team=team.to_dict(), message="Squad reallocation updated successfully."), 200

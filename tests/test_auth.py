@@ -54,6 +54,22 @@ def test_registration_validation_errors(client):
     assert res.status_code == 400
     assert "8 characters" in res.get_json()["error"]
 
+def test_registration_rejects_invalid_team_id(client):
+    payload = {
+        "name": "Test User",
+        "email": "team-id@example.com",
+        "password": "Password123",
+        "team_id": "not-an-id"
+    }
+    res = client.post("/api/auth/register", json=payload)
+    assert res.status_code == 400
+    assert res.get_json()["error"] == "Team ID must be a positive integer."
+
+    payload["team_id"] = 999999
+    res = client.post("/api/auth/register", json=payload)
+    assert res.status_code == 404
+    assert res.get_json()["error"] == "Team not found."
+
 def test_successful_login(client):
     """Test login with correct credentials."""
     client.post("/api/auth/register", json={
@@ -162,4 +178,3 @@ def test_change_password(auth_user):
         "password": "NewSecretPassword99!"
     })
     assert login_res.status_code == 200
-

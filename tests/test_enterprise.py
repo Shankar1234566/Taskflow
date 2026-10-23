@@ -66,6 +66,24 @@ def test_enterprise_hierarchy_teams_listing(app, enterprise_squad):
     assert "lead@enterprise.com" in emails
     assert "alice@enterprise.com" in emails
 
+def test_team_endpoints_reject_invalid_lead_ids(app, enterprise_squad):
+    client = login_client(app, "admin@enterprise.com", "AdminPass123!")
+
+    invalid_lead = client.post("/api/teams", json={"name": "Invalid Lead", "lead_id": "not-an-id"})
+    assert invalid_lead.status_code == 400
+    assert invalid_lead.get_json()["error"] == "Lead ID must be a positive integer."
+
+    missing_lead = client.post("/api/teams", json={"name": "Missing Lead", "lead_id": 999999})
+    assert missing_lead.status_code == 404
+    assert missing_lead.get_json()["error"] == "Lead user not found."
+
+    invalid_target = client.patch(
+        f"/api/teams/{enterprise_squad['squad_id']}/reassign",
+        json={"target_team_id": "not-an-id", "task_ids": [1]}
+    )
+    assert invalid_target.status_code == 400
+    assert invalid_target.get_json()["error"] == "Team ID must be a positive integer."
+
 def test_lead_task_creation_and_member_isolation(app, enterprise_squad):
     """Lead creates a deliverable and assigns it to Alice (Member)."""
     lead_client = login_client(app, "lead@enterprise.com", "LeadPass123!")
@@ -429,5 +447,4 @@ def test_admin_monitor_performances_and_assign_to_team_lead(app, enterprise_squa
     task = task_res.get_json()["task"]
     assert task["assigned_to_id"] == lead_id
     assert task["team_id"] == squad_id
-
 

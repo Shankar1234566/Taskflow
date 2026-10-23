@@ -4,6 +4,7 @@ from flask import Blueprint, request, session, jsonify, current_app, send_from_d
 from werkzeug.utils import secure_filename
 from models import db, Task, User, Team, ActivityLog
 from utils.auth_decorators import login_required, role_required
+from utils.validation import parse_optional_id
 
 tasks_bp = Blueprint("tasks", __name__)
 VALID_PRIORITIES = {"Critical", "High", "Medium", "Low"}
@@ -166,11 +167,13 @@ def validate_task_input(data, partial=False):
             cleaned["completed_at"] = None
 
     # Enterprise Team & Assignee fields
-    if "team_id" in data:
-        cleaned["team_id"] = int(data["team_id"]) if data["team_id"] else None
-
-    if "assigned_to_id" in data:
-        cleaned["assigned_to_id"] = int(data["assigned_to_id"]) if data["assigned_to_id"] else None
+    for field, label in (("team_id", "Team ID"), ("assigned_to_id", "Assignee ID")):
+        if field not in data:
+            continue
+        parsed_id, error = parse_optional_id(data[field], label)
+        if error:
+            return None, error
+        cleaned[field] = parsed_id
 
     return cleaned, None
 
@@ -374,6 +377,9 @@ def create_task():
         if not target_team_id or (current_user.role == "Lead" and not current_user.is_admin):
             target_team_id = current_user.team_id
 
+    if target_team_id and not db.session.get(Team, target_team_id):
+        return jsonify(error="Team not found."), 404
+
     initial_status = cleaned.get("status") or "Pending"
     task = Task(
         user_id=task_user_id,
@@ -433,11 +439,15 @@ def update_task(task_id):
             if current_user.role not in ("Admin", "Lead") and not current_user.is_admin:
                 return jsonify(error="Only Leads and Admins can reassign tasks."), 403
             assignee = db.session.get(User, new_assignee_id)
-            if assignee:
-                task.assigned_to_id = assignee.id
-                task.user_id = assignee.id
-                if not task.team_id and assignee.team_id:
-                    task.team_id = assignee.team_id
+            if not assignee:
+                return jsonify(error="Assignee user not found."), 404
+            task.assigned_to_id = assignee.id
+            task.user_id = assignee.id
+            if not task.team_id and assignee.team_id:
+                task.team_id = assignee.team_id
+
+    if "team_id" in cleaned and cleaned["team_id"] and not db.session.get(Team, cleaned["team_id"]):
+        return jsonify(error="Team not found."), 404
 
     for field, val in cleaned.items():
         if field not in ("assigned_to_id",):

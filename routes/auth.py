@@ -2,6 +2,7 @@ import re
 from functools import wraps
 from flask import Blueprint, request, session, jsonify, current_app
 from models import db, User, Team
+from utils.validation import parse_optional_id
 
 auth_bp = Blueprint("auth", __name__)
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
@@ -25,6 +26,8 @@ from utils.auth_decorators import role_required
 def register_user():
     """Shared logic for registration endpoints (/register and /signup)."""
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify(error="Invalid request payload. Expected JSON object."), 400
     name = (data.get("name") or data.get("username") or "").strip()
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
@@ -58,7 +61,11 @@ def register_user():
         assigned_role = "Member"
 
     is_admin = is_first or assigned_role == "Admin"
-    team_id_val = int(team_id) if team_id else None
+    team_id_val, error = parse_optional_id(team_id, "Team ID")
+    if error:
+        return jsonify(error=error), 400
+    if team_id_val and not db.session.get(Team, team_id_val):
+        return jsonify(error="Team not found."), 404
 
     user = User(name=name[:80], email=email, is_admin=is_admin, role=assigned_role, team_id=team_id_val)
     user.set_password(password)
