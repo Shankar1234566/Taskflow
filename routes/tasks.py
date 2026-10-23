@@ -5,6 +5,20 @@ from werkzeug.utils import secure_filename
 from models import db, Task, User, Team, ActivityLog
 from utils.auth_decorators import login_required, role_required
 from utils.validation import parse_optional_id
+from services.notification_service import (
+    notify_status_transition,
+    notify_auto_routed_bug,
+    notify_unblocked_dependents,
+    notify_task_assigned,
+    notify_review_requested,
+    notify_feedback_submitted,
+    add_watcher,
+    remove_watcher,
+    get_task_watchers,
+    dispatch_event,
+    EVENT_HIGH_PRIORITY_BUG
+)
+from routes.notifications import toggle_watch_logic, get_watch_status_logic
 
 tasks_bp = Blueprint("tasks", __name__)
 VALID_PRIORITIES = {"Critical", "High", "Medium", "Low"}
@@ -206,26 +220,39 @@ def list_tasks():
         # Admin can view all tasks across company when no team_id filter is specified
     elif current_user.role == "Lead":
         if current_user.team_id:
-            query = query.filter(Task.team_id == current_user.team_id)
+            query = query.filter(db.or_(
+                Task.team_id == current_user.team_id,
+                Task.assigned_to_id == current_user.id,
+                Task.user_id == current_user.id,
+                Task.created_by_id == current_user.id
+            ))
         else:
             query = query.filter(db.or_(
                 Task.assigned_to_id == current_user.id,
-                Task.user_id == current_user.id
+                Task.user_id == current_user.id,
+                Task.created_by_id == current_user.id
             ))
     else:
         # Software Engineer / Employee / Member
         if scope in ("my", "my-tasks") or args.get("assigned") == "me":
             query = query.filter(db.or_(
                 Task.assigned_to_id == current_user.id,
-                Task.user_id == current_user.id
+                Task.user_id == current_user.id,
+                Task.created_by_id == current_user.id
             ))
         elif current_user.team_id:
-            # Team workspace view: shows all deliverables in designated team
-            query = query.filter(Task.team_id == current_user.team_id)
+            # Team workspace view: shows all deliverables in designated team OR assigned directly to user OR created by user
+            query = query.filter(db.or_(
+                Task.team_id == current_user.team_id,
+                Task.assigned_to_id == current_user.id,
+                Task.user_id == current_user.id,
+                Task.created_by_id == current_user.id
+            ))
         else:
             query = query.filter(db.or_(
                 Task.assigned_to_id == current_user.id,
-                Task.user_id == current_user.id
+                Task.user_id == current_user.id,
+                Task.created_by_id == current_user.id
             ))
 
     # Search filter (title, description, tags)
@@ -331,6 +358,38 @@ def list_tasks():
         out.append(d)
     return jsonify(tasks=out), 200
 
+def check_leave_conflict(assigned_to_id, due_date):
+    """
+    Checks if assigned employee is on approved leave during task due date.
+    Returns warning message string if conflict exists, else None.
+    """
+    if not assigned_to_id or not due_date:
+        return None
+    try:
+        from models import LeaveRequest
+        due_date_str = due_date.strftime("%Y-%m-%d") if hasattr(due_date, "strftime") else str(due_date)[:10]
+        active_leave = LeaveRequest.query.filter(
+            LeaveRequest.user_id == assigned_to_id,
+            LeaveRequest.status == "Approved",
+            LeaveRequest.start_date <= due_date_str,
+            LeaveRequest.end_date >= due_date_str
+        ).first()
+        if active_leave:
+            assignee = db.session.get(User, assigned_to_id)
+            name = (assignee.name if assignee and getattr(assignee, 'name', None) else (assignee.username if assignee else "Assignee"))
+            return f"Warning: {name} is on approved leave from {active_leave.start_date} to {active_leave.end_date}."
+    except Exception:
+        pass
+    return None
+
+@tasks_bp.get("/check-conflict")
+@login_required
+def check_task_leave_conflict():
+    user_id = request.args.get("assigned_to_id", type=int) or request.args.get("user_id", type=int)
+    due_date = request.args.get("due_date", type=str)
+    warning = check_leave_conflict(user_id, due_date)
+    return jsonify(conflict=bool(warning), warning=warning, message=warning or ""), 200
+
 @tasks_bp.post("")
 @tasks_bp.post("/")
 @login_required
@@ -352,8 +411,30 @@ def create_task():
     # Role permission check for assignee allocation
     assigned_to_id = cleaned.get("assigned_to_id")
     target_team_id = cleaned.get("team_id")
+    was_auto_routed = False
+    auto_assigned_engineer = None
+    has_explicit_assignee = bool(data.get("assigned_to_id"))
 
-    if assigned_to_id:
+    # Automated Bug & Deliverable Routing:
+    # When a task of category "Bug" or "Defect" is created without an explicit assignee,
+    # automatically route and assign it to the Team Lead or a designated On-Call/Default Engineer based on team settings.
+    task_category = (cleaned.get("category") or "").strip()
+    if task_category in ("Bug", "Defect") and not has_explicit_assignee:
+        routing_team_id = target_team_id or current_user.team_id
+        if routing_team_id:
+            team_obj = db.session.get(Team, routing_team_id)
+            if team_obj and getattr(team_obj, "auto_routing_enabled", True):
+                if team_obj.default_bug_assignee_id:
+                    auto_assigned_engineer = db.session.get(User, team_obj.default_bug_assignee_id)
+                elif team_obj.lead_id:
+                    auto_assigned_engineer = db.session.get(User, team_obj.lead_id)
+
+                if auto_assigned_engineer:
+                    assigned_to_id = auto_assigned_engineer.id
+                    target_team_id = routing_team_id
+                    was_auto_routed = True
+
+    if assigned_to_id and not was_auto_routed:
         # If assigning to someone else, check privileges
         if assigned_to_id != current_user.id:
             if current_user.role not in ("Admin", "Lead") and not current_user.is_admin:
@@ -371,6 +452,12 @@ def create_task():
             task_user_id = assignee.id
             if not target_team_id or (current_user.role == "Lead" and not current_user.is_admin):
                 target_team_id = current_user.team_id or assignee.team_id
+        else:
+            task_user_id = current_user.id
+            if not target_team_id or (current_user.role == "Lead" and not current_user.is_admin):
+                target_team_id = current_user.team_id
+    elif was_auto_routed and auto_assigned_engineer:
+        task_user_id = auto_assigned_engineer.id
     else:
         task_user_id = current_user.id
         assigned_to_id = current_user.id
@@ -380,6 +467,16 @@ def create_task():
     if target_team_id and not db.session.get(Team, target_team_id):
         return jsonify(error="Team not found."), 404
 
+    # Optional dependency / blocker link
+    blocked_by_id = data.get("blocked_by_id")
+    if blocked_by_id:
+        try:
+            blocked_by_id = int(blocked_by_id)
+            if not db.session.get(Task, blocked_by_id):
+                blocked_by_id = None
+        except (ValueError, TypeError):
+            blocked_by_id = None
+
     initial_status = cleaned.get("status") or "Pending"
     task = Task(
         user_id=task_user_id,
@@ -387,15 +484,41 @@ def create_task():
         created_by_id=current_user.id,
         team_id=target_team_id,
         status=initial_status,
+        blocked_by_id=blocked_by_id,
         **{k: v for k, v in cleaned.items() if k not in ("team_id", "assigned_to_id", "status")}
     )
     db.session.add(task)
     db.session.commit()
 
+    # Automatically add creator and assignee as watchers
+    add_watcher(task.id, current_user.id)
+    if assigned_to_id:
+        add_watcher(task.id, assigned_to_id)
+
+    # Event-triggered notifications
+    if was_auto_routed and auto_assigned_engineer:
+        notify_auto_routed_bug(task, auto_assigned_engineer, actor_id=current_user.id)
+    else:
+        if assigned_to_id and assigned_to_id != current_user.id:
+            notify_task_assigned(task, assigned_to_id, former_assignee_id=None, actor_id=current_user.id)
+        if task_category in ("Bug", "Defect") and (task.priority or "").capitalize() in ("Critical", "High"):
+            dispatch_event(
+                EVENT_HIGH_PRIORITY_BUG,
+                task,
+                actor_id=current_user.id,
+                priority="Urgent"
+            )
+
     log_activity("created", task.title, task.id, f"Priority: {task.priority}, Category: {task.category}")
     db.session.commit()
 
-    return jsonify(task=task.to_dict(), message="Task created successfully."), 201
+    # Cross-Module Conflict Detection with Leave Management
+    conflict_warn = check_leave_conflict(task.assigned_to_id, task.due_date)
+    resp = {"task": task.to_dict(), "message": "Task created successfully."}
+    if conflict_warn:
+        resp["warning"] = conflict_warn
+        resp["conflict_warning"] = conflict_warn
+    return jsonify(**resp), 201
 
 @tasks_bp.get("/<int:task_id>")
 @login_required
@@ -432,6 +555,9 @@ def update_task(task_id):
     if error:
         return jsonify(error=error), 400
 
+    old_assignee_id = task.assigned_to_id
+    old_status = task.status
+
     # If reassigning member
     if "assigned_to_id" in cleaned and cleaned["assigned_to_id"]:
         new_assignee_id = cleaned["assigned_to_id"]
@@ -456,13 +582,25 @@ def update_task(task_id):
     task.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
+    # Dispatch assignment & status change notifications
+    if task.assigned_to_id != old_assignee_id:
+        notify_task_assigned(task, task.assigned_to_id, old_assignee_id, actor_id=current_user.id)
+    if task.status != old_status:
+        notify_status_transition(task, old_status, task.status, actor_id=current_user.id)
+
     log_activity("updated", task.title, task.id)
     db.session.commit()
 
     d = task.to_dict()
     is_lead_or_admin = current_user.role in ("Admin", "Lead") or current_user.is_admin
     d["can_edit"] = True if is_lead_or_admin else bool(task.assigned_to_id == current_user.id or task.user_id == current_user.id)
-    return jsonify(task=d, message="Task updated successfully."), 200
+    
+    conflict_warn = check_leave_conflict(task.assigned_to_id, task.due_date)
+    resp = {"task": d, "message": "Task updated successfully."}
+    if conflict_warn:
+        resp["warning"] = conflict_warn
+        resp["conflict_warning"] = conflict_warn
+    return jsonify(**resp), 200
 
 @tasks_bp.patch("/<int:task_id>/status")
 @login_required
@@ -483,6 +621,7 @@ def update_status(task_id):
     if new_status not in VALID_STATUSES:
         return jsonify(error="Invalid status transition."), 400
 
+    old_status = task.status
     task.status = new_status
     if new_status == "Completed":
         task.completed = True
@@ -493,6 +632,10 @@ def update_status(task_id):
 
     task.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    # Trigger status change notification & blocker unblocking
+    if old_status != new_status:
+        notify_status_transition(task, old_status, new_status, actor_id=current_user.id)
 
     log_activity(f"status_{new_status.lower().replace(' ', '_')}", task.title, task.id)
     db.session.commit()
@@ -546,6 +689,7 @@ def submit_proof_of_work(task_id):
     task.updated_at = datetime.now(timezone.utc)
 
     db.session.commit()
+    notify_review_requested(task, actor_id=current_user.id)
     log_activity("submitted_proof", task.title, task.id, f"PR: {git_link[:60] if git_link else 'None'}")
     db.session.commit()
 
@@ -593,6 +737,8 @@ def review_task(task_id):
         msg = "Revision requested. Deliverable reverted to In Progress with reviewer comments."
 
     db.session.commit()
+    notify_feedback_submitted(task, actor_id=current_user.id, action=action, feedback=feedback)
+
     return jsonify(task=task.to_dict(), message=msg), 200
 
 @tasks_bp.get("/uploads/<path:filename>")
@@ -616,6 +762,7 @@ def toggle_complete(task_id):
             return jsonify(error="Action forbidden. Employees can only complete deliverables assigned to them."), 403
 
     body = request.get_json(silent=True) or {}
+    old_status = task.status
     if "completed" in body:
         task.completed = bool(body["completed"])
     else:
@@ -632,6 +779,11 @@ def toggle_complete(task_id):
 
     task.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    if old_status != task.status:
+        notify_status_transition(task, old_status, task.status, actor_id=current_user.id)
+    if task.completed:
+        notify_unblocked_dependents(task)
 
     d = task.to_dict()
     is_lead_or_admin = current_user.role in ("Admin", "Lead") or current_user.is_admin
@@ -743,6 +895,9 @@ def bulk_complete():
         t.updated_at = now
 
     db.session.commit()
+    for t in tasks:
+        notify_unblocked_dependents(t)
+
     log_activity("bulk_completed", f"{len(tasks)} tasks", details=f"IDs: {task_ids}")
     db.session.commit()
 
@@ -793,3 +948,15 @@ def reorder_tasks():
 
     db.session.commit()
     return jsonify(ok=True, message="Task order updated."), 200
+
+@tasks_bp.post("/<int:task_id>/watch")
+@login_required
+def toggle_task_watch(task_id):
+    """Toggle watch/subscribe status on deliverable for current user."""
+    return toggle_watch_logic(task_id)
+
+@tasks_bp.get("/<int:task_id>/watch-status")
+@login_required
+def get_task_watch_status(task_id):
+    """Retrieve watch status and watcher count for deliverable."""
+    return get_watch_status_logic(task_id)

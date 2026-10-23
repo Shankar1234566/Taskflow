@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/table.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components/modals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/notifications.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body data-page="app">
@@ -56,6 +57,23 @@
         </a>
 
         <div class="nav-group-label">Workspace</div>
+        <a href="#chat" data-target="chat" title="Messages & Collaboration">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Messages</span>
+          <span class="badge green" id="badge-chat" style="display: none;">0</span>
+        </a>
+
+        <a href="#attendance" data-target="attendance" title="Attendance & Leave">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>Attendance & Leave</span>
+          <span class="badge gray" id="badge-attendance">Off</span>
+        </a>
+
         <a href="#calendar" data-target="calendar" title="Calendar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -146,6 +164,15 @@
               <option value="2">Frontend Core</option>
             </select>
           </div>
+
+          <!-- In-App Notification Center Trigger -->
+          <button class="notif-bell-btn" id="notif-bell-btn" title="Notification Center" aria-label="Open notifications">
+            <svg class="notif-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span class="notif-badge hidden" id="notif-badge-count">0</span>
+          </button>
 
           <!-- User Avatar & Logout -->
           <button class="avatar" id="user-avatar" title="Current User">EM</button>
@@ -297,40 +324,47 @@
       </section>
 
       <!-- VIEW 2: MY TASKS (Directly filtered to current user) -->
+      <!-- VIEW 2: MY TASKS (Directly filtered to current user) -->
       <section data-view="my-tasks" hidden>
         <div class="card tasks-card">
           <div class="card-h">
-            <h3>My Assigned Deliverables</h3>
-            <p class="card-sub">Tickets directly allocated to your user account requiring implementation or proof submission.</p>
+            <div>
+              <h3>My Assigned Deliverables</h3>
+              <p class="card-sub">Tickets directly allocated to your user account requiring implementation or proof submission.</p>
+            </div>
           </div>
           <div class="task-table-wrap">
             <table class="task-table">
               <thead>
                 <tr>
-                  <th style="width: 36px;"></th>
-                  <th>Title & Description</th>
-                  <th style="width: 100px;">Priority</th>
-                  <th style="width: 110px;">Category</th>
-                  <th style="width: 120px;">Due Date</th>
-                  <th style="width: 110px;">Status</th>
-                  <th style="width: 160px;">Assignee</th>
-                  <th style="width: 130px; text-align: right;">Actions</th>
+                  <th class="col-select" style="width: 44px;"></th>
+                  <th class="col-title">Title & Description</th>
+                  <th class="col-pipeline" style="width: 220px;">Dependency Pipeline</th>
+                  <th class="col-priority" style="width: 110px;">Priority</th>
+                  <th class="col-category" style="width: 120px;">Category</th>
+                  <th class="col-due" style="width: 130px;">Due Date</th>
+                  <th class="col-status" style="width: 130px;">Status</th>
+                  <th class="col-assignee" style="width: 160px;">Assignee</th>
+                  <th class="col-actions" style="width: 140px; text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="my-task-table-body">
-                <!-- Uses filteredTasks in tasks.js -->
+                <!-- Dynamically rendered by tasks.js -->
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- VIEW 3: LEAD REVIEW PIPELINE -->
+      <!-- VIEW 3: DELIVERABLE REVIEW PIPELINE -->
       <section data-view="review-pipeline" hidden>
         <div class="card" style="margin-bottom: 16px;">
-          <div class="card-h">
-            <h3>Deliverable Review Pipeline</h3>
-            <p class="card-sub">Inspect developer implementation notes, inspect Pull Request branches, review artifacts, and approve deliverables.</p>
+          <div class="card-h" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3>Deliverable Review Pipeline</h3>
+              <p class="card-sub">Inspect developer implementation notes, inspect Pull Request branches, review artifacts, and approve deliverables.</p>
+            </div>
+            <span class="pill s-In-Review" id="review-pipeline-count-pill" style="font-size: 13px; font-weight: 600;">0 In Review</span>
           </div>
         </div>
         <div class="review-pipeline-grid" id="review-pipeline-container">
@@ -352,11 +386,29 @@
       <!-- VIEW 5: CALENDAR VIEW -->
       <section data-view="calendar" hidden>
         <div class="card">
-          <div class="card-h">
-            <h3>Interactive Delivery Schedule</h3>
-            <p class="card-sub">Monthly roadmap showing ticket deadlines across all engineering teams.</p>
+          <div class="card-h" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3>Interactive Delivery Schedule</h3>
+              <p class="card-sub">Monthly roadmap showing ticket deadlines across all engineering teams.</p>
+            </div>
+            <div class="full-cal-nav" style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="btn btn-sm" id="btn-cal-prev" title="Previous Month">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <h4 id="full-calendar-month-title" style="margin: 0; min-width: 150px; text-align: center; font-size: 16px; font-weight: 700; color: var(--color-text-primary);"></h4>
+              <button type="button" class="btn btn-sm" id="btn-cal-next" title="Next Month">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button type="button" class="btn btn-sm" id="btn-cal-today" style="margin-left: 6px;">Today</button>
+            </div>
           </div>
-          <div class="cal-days-grid" id="calendar-full-view" style="gap: 8px;"></div>
+
+          <div class="full-cal-wrap" style="margin-top: 16px;">
+            <div class="full-cal-weekdays">
+              <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
+            <div class="full-cal-days-grid" id="calendar-full-view"></div>
+          </div>
         </div>
       </section>
 
@@ -373,27 +425,81 @@
 
       <!-- VIEW 7: SETTINGS VIEW -->
       <section data-view="settings" hidden>
-        <div class="card" style="max-width: 600px;">
+        <div class="card" style="max-width: 680px;">
           <div class="card-h">
-            <h3>Account & Preferences</h3>
-            <p class="card-sub">Configure user settings, visual theme tokens, and authentication.</p>
+            <div>
+              <h3>Account & Preferences</h3>
+              <p class="card-sub">Configure user profile, visual theme tokens, and system preferences.</p>
+            </div>
           </div>
-          <div style="display: grid; gap: 14px; margin-top: 16px;">
+
+          <form id="settings-form" style="display: grid; gap: 16px; margin-top: 16px;" onsubmit="event.preventDefault(); window.TaskflowDashboard.saveSettings();">
+            <div class="settings-profile-head" style="display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--color-border);">
+              <div class="avatar avatar-lg" id="settings-avatar-preview" style="width: 52px; height: 52px; font-size: 20px;">U</div>
+              <div>
+                <h4 id="settings-display-name" style="margin: 0 0 4px; font-size: 17px;">User</h4>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span class="role-badge" id="settings-role-badge">Member</span>
+                  <span class="text-sm text-muted" id="settings-team-badge">No Squad</span>
+                </div>
+              </div>
+            </div>
+
             <label>Full Name
-              <input type="text" id="settings-name" value="User">
+              <input type="text" id="settings-name" required placeholder="Your full name">
             </label>
-            <label>Email Address
-              <input type="email" id="settings-email" value="user@taskflow.local" readonly disabled>
+
+            <label>Email Address (Account Identifier)
+              <input type="email" id="settings-email" readonly disabled style="opacity: 0.75; cursor: not-allowed;">
             </label>
-            <label>Theme Preference
-              <select id="settings-theme">
-                <option value="light">Enterprise Light Mode (Default)</option>
-                <option value="dark">Dark Theme</option>
-              </select>
-            </label>
-            <button class="btn primary" style="width: fit-content; margin-top: 8px;" onclick="alert('Settings saved.')">
-              Save Preferences
-            </button>
+
+            <div class="row">
+              <label>Theme Preference
+                <select id="settings-theme">
+                  <option value="light">Enterprise Light Mode</option>
+                  <option value="dark">Dark Theme (Midnight Code)</option>
+                </select>
+              </label>
+
+              <label>Assigned Squad
+                <input type="text" id="settings-squad-display" readonly disabled style="opacity: 0.75; cursor: not-allowed;">
+              </label>
+            </div>
+
+            <div class="settings-notification-box" style="background: var(--color-canvas-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 14px;">
+              <strong style="display: block; font-size: 14px; margin-bottom: 8px; color: var(--color-text-primary);">Notification Preferences</strong>
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: normal; margin-bottom: 6px;">
+                <input type="checkbox" id="settings-pref-inapp" checked style="width: 16px; height: 16px;">
+                <span>In-App Notification Center Drawer alerts</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: normal;">
+                <input type="checkbox" id="settings-pref-routing" checked style="width: 16px; height: 16px;">
+                <span>Automated Defect & High-Priority Bug Routing Alerts</span>
+              </label>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+              <button type="submit" class="btn primary" id="btn-save-settings">
+                Save Preferences
+              </button>
+              <span id="settings-status-msg" style="font-size: 13px; color: var(--color-brand-primary); font-weight: 600; display: none;">Saved successfully!</span>
+            </div>
+          </form>
+
+          <!-- Password Change Section -->
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border);">
+            <h4 style="margin: 0 0 6px; font-size: 15px; color: var(--color-text-primary);">Change Password</h4>
+            <p class="card-sub" style="margin-bottom: 12px;">Ensure your account uses a secure password with at least 8 characters.</p>
+            <form id="settings-password-form" style="display: grid; gap: 12px; max-width: 420px;" onsubmit="event.preventDefault(); window.TaskflowDashboard.changePassword();">
+              <label>Current Password
+                <input type="password" id="settings-current-password" required placeholder="••••••••">
+              </label>
+              <label>New Password (min 8 characters)
+                <input type="password" id="settings-new-password" required minlength="8" placeholder="••••••••">
+              </label>
+              <button type="submit" class="btn" style="width: fit-content;">Update Password</button>
+              <span id="password-status-msg" style="font-size: 13px; display: none;"></span>
+            </form>
           </div>
         </div>
       </section>
@@ -431,6 +537,177 @@
                   <td>1</td>
                   <td><span class="pill p-Low">25% Done</span></td>
                 </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. SECTION: REAL-TIME CHAT & COLLABORATION -->
+      <section data-view="chat" hidden>
+        <div class="chat-container-split">
+          <!-- Left Channels Panel -->
+          <aside class="chat-channels-panel">
+            <div class="chat-channels-header">
+              <h3>Channels</h3>
+              <span class="chat-live-badge">Live</span>
+            </div>
+            <div class="chat-channels-list" id="chat-channels-container">
+              <!-- Rendered via TaskflowChat.renderChannelList() -->
+            </div>
+          </aside>
+
+          <!-- Right Active Chat Window -->
+          <main class="chat-window-panel">
+            <div class="chat-window-header">
+              <div class="chat-window-title-wrap">
+                <h4 id="chat-active-title">Team General</h4>
+                <p id="chat-active-desc">Real-time squad collaboration stream</p>
+              </div>
+              <div class="chat-header-actions">
+                <span class="chat-badge-connected" id="chat-connection-status">Connected</span>
+              </div>
+            </div>
+
+            <!-- Messages Stream -->
+            <div class="chat-messages-stream" id="chat-messages-stream">
+              <!-- Rendered via TaskflowChat.renderMessages() -->
+            </div>
+
+            <!-- Input Bar -->
+            <form class="chat-input-bar" id="chat-form">
+              <button type="button" class="chat-action-btn" id="btn-chat-attach" title="Attach Link or Artifact">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </button>
+              <input type="text" id="chat-input-text" class="chat-input-field" placeholder="Type a message or paste a link... (Press Enter to send)" autocomplete="off" required>
+              <button type="submit" class="chat-send-btn" id="btn-chat-send" title="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+                <span>Send</span>
+              </button>
+            </form>
+          </main>
+        </div>
+      </section>
+
+      <!-- 8. SECTION: ATTENDANCE & LEAVE MANAGEMENT -->
+      <section data-view="attendance" hidden>
+        <!-- Top Check-in Banner Widget -->
+        <div class="attendance-checkin-hero">
+          <div class="hero-clock-block">
+            <div class="hero-digital-clock" id="att-live-clock">--:--:--</div>
+            <div class="hero-date-str" id="att-live-date">Loading date...</div>
+            <p class="hero-status-subtitle" id="att-checkin-status-text">Not Checked In Today</p>
+            <div class="hero-session-metrics" id="att-session-details"></div>
+          </div>
+          <div class="hero-action-block">
+            <button type="button" class="checkin-action-btn btn-in" id="btn-checkin-action">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+              <span>Check In</span>
+            </button>
+            <button type="button" class="btn secondary" id="btn-open-apply-leave" style="margin-top: 10px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Apply for Leave
+            </button>
+          </div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="attendance-metrics-grid">
+          <div class="card att-metric-card">
+            <div class="att-metric-title">Today Logged</div>
+            <div class="att-metric-value" id="att-metric-today">0 hrs</div>
+            <div class="att-metric-sub">Current active shift</div>
+          </div>
+          <div class="card att-metric-card">
+            <div class="att-metric-title">Monthly Logged</div>
+            <div class="att-metric-value" id="att-metric-monthly">0 hrs</div>
+            <div class="att-metric-sub">Accumulated hours</div>
+          </div>
+          <div class="card att-metric-card">
+            <div class="att-metric-title">Working Days</div>
+            <div class="att-metric-value" id="att-metric-days">0 days</div>
+            <div class="att-metric-sub">Shifts this calendar month</div>
+          </div>
+          <div class="card att-metric-card">
+            <div class="att-metric-title">Approved Leave Balance</div>
+            <div class="att-metric-value" id="att-metric-balance">18 days</div>
+            <div class="att-metric-sub">Available PTO credits</div>
+          </div>
+        </div>
+
+        <!-- Teammate Presence Live Bar -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-head">
+            <div>
+              <h3>Squad Visual Presence</h3>
+              <p class="card-sub">Real-time attendance & leave statuses of your team members</p>
+            </div>
+          </div>
+          <div class="teammates-presence-grid" id="teammates-presence-container">
+            <!-- Rendered by TaskflowAttendance.renderTeammates() -->
+          </div>
+        </div>
+
+        <!-- Team Lead Leave Approval Queue (conditionally shown for Leads/Admins) -->
+        <div class="card" id="leave-approval-card" style="display: none; margin-bottom: 24px;">
+          <div class="card-head">
+            <div>
+              <h3>Team Leave Approval Queue</h3>
+              <p class="card-sub">Review and approve team time-off requests with workload awareness</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Leave Type</th>
+                  <th>Date Range</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="leave-approval-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Employee My Leave History -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>My Leave Applications & History</h3>
+              <p class="card-sub">Track submitted leave requests and approval status</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Leave Type</th>
+                  <th>Dates</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Submitted At</th>
+                </tr>
+              </thead>
+              <tbody id="my-leaves-table-body">
+                <!-- Rendered dynamically -->
               </tbody>
             </table>
           </div>
@@ -584,6 +861,15 @@
         </label>
       </div>
 
+      <!-- Cross-Module Workload Conflict Advisory Banner -->
+      <div id="add-task-conflict-alert" class="task-conflict-banner" style="display: none; margin: 10px 0 16px; padding: 12px 14px; background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px; color: #92400E; font-size: 13px; align-items: flex-start; gap: 10px;">
+        <span style="font-size: 18px; line-height: 1;">⚠️</span>
+        <div style="flex: 1;">
+          <strong style="display: block; font-weight: 700; color: #78350F;">Workload & Leave Conflict Advisory</strong>
+          <span id="add-task-conflict-msg" style="display: block; margin-top: 2px;"></span>
+        </div>
+      </div>
+
       <div class="actions">
         <button type="button" class="btn" onclick="document.getElementById('modal-add-task').close()">Cancel</button>
         <button type="submit" class="btn primary">Create Deliverable</button>
@@ -688,11 +974,59 @@
         <div><strong>Assignee</strong> <span id="detail-assignee"></span></div>
         <div><strong>Squad</strong> <span id="detail-team"></span></div>
       </div>
-      <div class="det-actions">
+      <div class="det-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+        <button class="btn btn-watch" id="btn-watch-task" onclick="TaskflowNotifications.toggleWatch(this.getAttribute('data-task-id'))" title="Subscribe to deliverable updates">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          <span>Watch Deliverable</span>
+        </button>
         <button class="btn" onclick="document.getElementById('modal-task-detail').close()">Close</button>
       </div>
     </div>
   </dialog>
+
+  <!-- Modal E: Apply for Leave Modal -->
+  <dialog id="modal-apply-leave">
+    <div class="dialog-h">
+      <div>
+        <h3>Apply for Leave</h3>
+        <p class="card-sub" style="margin: 2px 0 0;">Submit time-off request for Lead review</p>
+      </div>
+      <button class="btn-close" id="btn-close-leave-modal">&times;</button>
+    </div>
+    <form id="form-apply-leave">
+      <div class="row">
+        <label>Leave Type
+          <select name="leave_type" required>
+            <option value="Casual">Casual Leave</option>
+            <option value="Sick">Sick Leave</option>
+            <option value="Paid" selected>Paid Time Off (PTO)</option>
+            <option value="Emergency">Emergency Leave</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <label>Start Date
+          <input type="date" name="start_date" id="leave-start-date" required>
+        </label>
+        <label>End Date
+          <input type="date" name="end_date" id="leave-end-date" required>
+        </label>
+      </div>
+      <label>Reason for Leave
+        <textarea name="reason" rows="3" required placeholder="Describe your leave request or emergency context..."></textarea>
+      </label>
+      <div class="actions">
+        <button type="button" class="btn" onclick="document.getElementById('modal-apply-leave').close()">Cancel</button>
+        <button type="submit" class="btn primary">Submit Request</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- SOCKET.IO REALTIME CLIENT ENGINE -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <!-- MODULAR JAVASCRIPT LIBRARIES -->
   <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
@@ -700,6 +1034,9 @@
   <script src="{{ url_for('static', filename='js/tasks.js') }}"></script>
   <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
   <script src="{{ url_for('static', filename='js/layout-engine.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/attendance.js') }}"></script>
 
   <!-- APP BOOTSTRAPPER -->
   <script>
@@ -719,6 +1056,19 @@
       // 3. Initialize Tasks & AI Assistant
       await window.TaskflowTasks.init();
       window.TaskflowAssistant.init();
+
+      // 4. Initialize Jira-Style Notifications & Subscriptions Engine
+      if (window.TaskflowNotifications) {
+        await window.TaskflowNotifications.init();
+      }
+
+      // 5. Initialize Instant Messaging (Socket.IO) & Attendance Tracking
+      if (window.TaskflowChat) {
+        await window.TaskflowChat.init();
+      }
+      if (window.TaskflowAttendance) {
+        await window.TaskflowAttendance.init();
+      }
     });
   </script>
 </body>

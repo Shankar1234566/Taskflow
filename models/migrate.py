@@ -19,8 +19,52 @@ def apply_migrations(db_path):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name VARCHAR(50) NOT NULL UNIQUE,
                 lead_id INTEGER,
+                default_bug_assignee_id INTEGER,
+                auto_routing_enabled BOOLEAN DEFAULT 1 NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(lead_id) REFERENCES users(id) ON DELETE SET NULL
+                FOREIGN KEY(lead_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY(default_bug_assignee_id) REFERENCES users(id) ON DELETE SET NULL
+            )
+        """)
+
+        # Check teams table columns
+        cursor.execute("PRAGMA table_info(teams)")
+        team_cols = {row[1] for row in cursor.fetchall()}
+        if "default_bug_assignee_id" not in team_cols:
+            cursor.execute("ALTER TABLE teams ADD COLUMN default_bug_assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL")
+        if "auto_routing_enabled" not in team_cols:
+            cursor.execute("ALTER TABLE teams ADD COLUMN auto_routing_enabled BOOLEAN DEFAULT 1 NOT NULL")
+
+        # Create notifications and task_watchers tables if they do not exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipient_id INTEGER NOT NULL,
+                sender_id INTEGER,
+                task_id INTEGER,
+                event_type VARCHAR(50) NOT NULL,
+                title VARCHAR(120) NOT NULL,
+                message TEXT NOT NULL,
+                target_url VARCHAR(255),
+                is_read BOOLEAN DEFAULT 0 NOT NULL,
+                priority VARCHAR(20) DEFAULT 'Normal' NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_recipient_read ON notifications(recipient_id, is_read)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_created ON notifications(created_at)")
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS task_watchers (
+                task_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (task_id, user_id),
+                FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """)
 
@@ -65,6 +109,8 @@ def apply_migrations(db_path):
             cursor.execute("ALTER TABLE tasks ADD COLUMN created_by_id INTEGER REFERENCES users(id) ON DELETE CASCADE")
         if "assigned_to_id" not in task_cols:
             cursor.execute("ALTER TABLE tasks ADD COLUMN assigned_to_id INTEGER REFERENCES users(id) ON DELETE SET NULL")
+        if "blocked_by_id" not in task_cols:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN blocked_by_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL")
 
         # Proof of work columns
         if "submission_notes" not in task_cols:
@@ -92,7 +138,60 @@ def apply_migrations(db_path):
             cursor.execute("INSERT OR IGNORE INTO teams (name) VALUES ('QA Squad')")
 
         # Ensure first user is Admin
-        cursor.execute("UPDATE users SET role = 'Admin' WHERE is_admin = 1 AND (role IS NULL OR role = 'Member')")
+        # Create chat_messages table if it does not exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender_id INTEGER NOT NULL,
+                team_id INTEGER NOT NULL,
+                task_id INTEGER,
+                content TEXT NOT NULL,
+                attachment_url VARCHAR(255),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+                FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_team_task ON chat_messages(team_id, task_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_messages(created_at)")
+
+        # Create attendance_records table if it does not exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS attendance_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                date VARCHAR(10) NOT NULL,
+                check_in_time DATETIME,
+                check_out_time DATETIME,
+                status VARCHAR(20) DEFAULT 'Present' NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT uq_user_attendance_date UNIQUE(user_id, date)
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance_records(user_id, date)")
+
+        # Create leave_requests table if it does not exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS leave_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                team_id INTEGER NOT NULL,
+                leave_type VARCHAR(30) NOT NULL,
+                start_date VARCHAR(10) NOT NULL,
+                end_date VARCHAR(10) NOT NULL,
+                reason TEXT NOT NULL,
+                status VARCHAR(20) DEFAULT 'Pending' NOT NULL,
+                reviewed_by_id INTEGER,
+                review_comment TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+                FOREIGN KEY(reviewed_by_id) REFERENCES users(id) ON DELETE SET NULL
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_leave_user_team ON leave_requests(user_id, team_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_leave_dates ON leave_requests(start_date, end_date)")
 
         conn.commit()
     except Exception as e:

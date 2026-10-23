@@ -21,6 +21,7 @@ class Task(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     assigned_to_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    blocked_by_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Proof of Work fields
     submission_notes = db.Column(db.Text, nullable=True)
@@ -115,6 +116,8 @@ class Task(db.Model):
             "assignee_name": assignee_name,
             "assignee_email": assignee_email,
             "user_id": self.user_id or self.assigned_to_id,
+            "blocked_by_id": self.blocked_by_id,
+            "watcher_count": self.watcher_subscriptions.count() if hasattr(self, "watcher_subscriptions") and hasattr(self.watcher_subscriptions, "count") else 0,
             "submission_notes": self.submission_notes or "",
             "git_repo_link": self.git_repo_link or "",
             "proof_file_path": self.proof_file_path or "",

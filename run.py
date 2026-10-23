@@ -1,5 +1,6 @@
 import os
 from app import create_app
+from routes.chat_sockets import socketio
 
 app = create_app()
 
@@ -7,4 +8,4 @@ if __name__ == "__main__":
     host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
     port = int(os.environ.get("FLASK_RUN_PORT", 8000))
     debug = os.environ.get("FLASK_DEBUG", "True").lower() in ("true", "1")
-    app.run(host=host, port=port, debug=debug)
+    socketio.run(app, host=host, port=port, debug=debug)

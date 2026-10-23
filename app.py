@@ -21,6 +21,9 @@ def create_app(config_class=Config):
     from routes.activity import activity_bp
     from routes.teams import teams_bp
     from routes.assistant import assistant_bp
+    from routes.notifications import notifications_bp
+    from routes.chat_sockets import chat_bp, socketio
+    from routes.attendance import attendance_bp, leaves_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(tasks_bp, url_prefix="/api/tasks")
@@ -29,6 +32,13 @@ def create_app(config_class=Config):
     app.register_blueprint(activity_bp, url_prefix="/api/activity")
     app.register_blueprint(teams_bp, url_prefix="/api/teams")
     app.register_blueprint(assistant_bp, url_prefix="/api/assistant")
+    app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
+    app.register_blueprint(chat_bp, url_prefix="/api/chat")
+    app.register_blueprint(attendance_bp, url_prefix="/api/attendance")
+    app.register_blueprint(leaves_bp, url_prefix="/api/leaves")
+
+    # Initialize Flask-SocketIO
+    socketio.init_app(app)
 
     # Team members alias endpoint (/api/team/members and /api/teams/members)
     @app.route("/api/team/members", methods=["GET"])

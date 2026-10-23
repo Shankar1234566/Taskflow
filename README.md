@@ -67,8 +67,8 @@ Open **PowerShell** in the project directory:
 # 1. Activate the Python virtual environment
 .\.venv\Scripts\Activate.ps1
 
-# 2. Run automated tests (51 tests)
-pytest -v
+# 2. Run automated tests (60 tests)
+.\.venv\Scripts\pytest -v
 
 # 3. Start the application
 python run.py

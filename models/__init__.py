@@ -19,3 +19,6 @@ from .team import Team  # noqa: E402
 from .user import User  # noqa: E402
 from .task import Task  # noqa: E402
 from .activity import ActivityLog  # noqa: E402
+from .notification import Notification, TaskWatcher  # noqa: E402
+from .chat import ChatMessage  # noqa: E402
+from .attendance import AttendanceRecord, LeaveRequest  # noqa: E402

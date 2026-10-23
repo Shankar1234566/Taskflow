@@ -219,3 +219,57 @@
   /* Dynamic scrollbar jump compensation variable set by layout-engine.js */
   --scrollbar-compensation:          0px;
 }
+
+/* ==========================================================================
+   DARK THEME TOKEN OVERRIDES (data-theme="dark")
+   ========================================================================== */
+[data-theme="dark"] {
+  --color-canvas-bg:         #0F172A;
+  --color-canvas-subtle:     #1E293B;
+  --color-canvas-inset:      #0B1120;
+  --color-surface:           #1E293B;
+  --color-surface-hover:     #334155;
+  --color-surface-active:    #475569;
+  --color-surface-selected:  #143522;
+
+  --color-text-primary:      #F8FAFC;
+  --color-text-secondary:    #CBD5E1;
+  --color-text-muted:        #94A3B8;
+  --color-text-subtle:       #64748B;
+  --color-text-inverse:      #0F172A;
+  --color-text-disabled:     #475569;
+
+  --color-border:            #334155;
+  --color-border-subtle:     #1E293B;
+  --color-border-strong:     #475569;
+  --color-border-focus:      #4ADE80;
+
+  --color-brand-primary:     #4ADE80;
+  --color-brand-hover:       #22C55E;
+  --color-brand-active:      #16A34A;
+  --color-brand-soft:        rgba(74, 222, 128, 0.15);
+  --color-brand-border:      rgba(74, 222, 128, 0.35);
+  --color-brand-glow:        rgba(74, 222, 128, 0.25);
+
+  --color-success-fg:        #4ADE80;
+  --color-success-bg:        rgba(74, 222, 128, 0.15);
+  --color-success-border:    rgba(74, 222, 128, 0.30);
+  --color-success-solid:     #22C55E;
+
+  --color-warning-fg:        #FBBF24;
+  --color-warning-bg:        rgba(251, 191, 36, 0.15);
+  --color-warning-border:    rgba(251, 191, 36, 0.30);
+  --color-warning-solid:     #F59E0B;
+
+  --color-error-fg:          #F87171;
+  --color-error-bg:          rgba(248, 113, 113, 0.15);
+  --color-error-border:      rgba(248, 113, 113, 0.30);
+  --color-error-solid:       #EF4444;
+
+  --color-review-fg:         #C084FC;
+  --color-review-bg:         rgba(192, 132, 252, 0.15);
+  --color-review-border:      rgba(192, 132, 252, 0.30);
+  --color-review-solid:      #A855F7;
+
+  --shadow-rgb:              0 0 0;
+}

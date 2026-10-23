@@ -136,6 +136,17 @@ def reassign_team(team_id):
             if lead_user.role != "Admin":
                 lead_user.role = "Lead"
 
+    if "default_bug_assignee_id" in data:
+        bug_assignee_id, error = parse_optional_id(data.get("default_bug_assignee_id"), "Default Bug Assignee ID")
+        if error:
+            return jsonify(error=error), 400
+        if bug_assignee_id and not db.session.get(User, bug_assignee_id):
+            return jsonify(error="Default bug assignee user not found."), 404
+        team.default_bug_assignee_id = bug_assignee_id
+
+    if "auto_routing_enabled" in data:
+        team.auto_routing_enabled = bool(data.get("auto_routing_enabled"))
+
     # Reallocate tasks from this squad to another squad
     if "target_team_id" in data and "task_ids" in data:
         target_team_id, error = parse_optional_id(data.get("target_team_id"), "Team ID")
@@ -157,3 +168,32 @@ def reassign_team(team_id):
 
     db.session.commit()
     return jsonify(team=team.to_dict(), message="Squad reallocation updated successfully."), 200
+
+@teams_bp.patch("/<int:team_id>/routing")
+@role_required("Admin", "Lead")
+def update_team_routing_scheme(team_id):
+    """Configure auto-routing rules and default bug assignee for a squad."""
+    user_id = session.get("user_id")
+    user = db.session.get(User, user_id)
+    team = db.session.get(Team, team_id)
+    if not team:
+        return jsonify(error="Squad not found."), 404
+
+    # If Lead, only allowed to configure their own squad
+    if user.role == "Lead" and not user.is_admin and user.team_id != team.id:
+        return jsonify(error="Lead can only configure routing for their assigned squad."), 403
+
+    data = request.get_json(silent=True) or {}
+    if "default_bug_assignee_id" in data:
+        bug_assignee_id, error = parse_optional_id(data.get("default_bug_assignee_id"), "Default Bug Assignee ID")
+        if error:
+            return jsonify(error=error), 400
+        if bug_assignee_id and not db.session.get(User, bug_assignee_id):
+            return jsonify(error="Default bug assignee user not found."), 404
+        team.default_bug_assignee_id = bug_assignee_id
+
+    if "auto_routing_enabled" in data:
+        team.auto_routing_enabled = bool(data.get("auto_routing_enabled"))
+
+    db.session.commit()
+    return jsonify(team=team.to_dict(), message="Team notification & routing scheme updated."), 200

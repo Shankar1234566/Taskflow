@@ -79,6 +79,11 @@ const TaskflowAuth = {
       avatarEl.title = `${user.username || user.name} (${user.email})`;
     }
 
+    // Apply user theme preference
+    if (user.theme_preference) {
+      document.documentElement.setAttribute('data-theme', user.theme_preference);
+    }
+
     // Role-dependent UI visibility
     const isLeadOrAdmin = user.role === 'Admin' || user.role === 'Lead' || user.is_admin;
     const isAdmin = user.role === 'Admin' || user.is_admin;
@@ -89,10 +94,10 @@ const TaskflowAuth = {
       addTaskBtn.style.display = isLeadOrAdmin ? 'inline-flex' : 'none';
     }
 
-    // Show/hide Lead Review nav badge/item
+    // Review Pipeline nav item visible across team roles
     const navReview = document.getElementById('nav-review');
     if (navReview) {
-      navReview.hidden = !isLeadOrAdmin;
+      navReview.hidden = false;
     }
 
     // Show/hide Admin portal nav
