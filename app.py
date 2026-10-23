@@ -47,7 +47,9 @@ def create_app(config_class=Config):
     def login_page():
         if session.get("user_id"):
             return redirect(url_for("index"))
-        return render_template("login.html")
+        from models import Team
+        teams = Team.query.order_by(Team.name.asc()).all()
+        return render_template("login.html", teams=teams)
 
     @app.route("/dashboard")
     def dashboard():
