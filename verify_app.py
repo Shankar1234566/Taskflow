@@ -101,6 +101,25 @@ def test_everything():
     assert res.get_json()["task"]["status"] == "In Progress"
     print(f"  [PASS] PATCH /api/tasks/{new_task_id}/status -> In Progress")
 
+    # 11b. Member: Test Subtasks & Acceptance Checklist
+    res = client.post(f"/api/tasks/{new_task_id}/subtasks", json={"title": "Write unit tests for token expiry"})
+    assert res.status_code == 201
+    subtask_id = res.get_json()["subtask"]["id"]
+    print(f"  [PASS] POST /api/tasks/{new_task_id}/subtasks (Created subtask #{subtask_id})")
+
+    res = client.patch(f"/api/subtasks/{subtask_id}/toggle")
+    assert res.status_code == 200
+    assert res.get_json()["subtask"]["is_completed"] is True
+    assert res.get_json()["task_progress"]["progress_pct"] == 100
+    print(f"  [PASS] PATCH /api/subtasks/{subtask_id}/toggle (Completed: 100%)")
+
+    res = client.get(f"/api/tasks/{new_task_id}/subtasks")
+    assert res.status_code == 200
+    assert res.get_json()["total"] == 1
+    assert res.get_json()["completed"] == 1
+    print(f"  [PASS] GET /api/tasks/{new_task_id}/subtasks (Verified metrics)")
+
+
     # 12. Member: Submit Proof of Work
     proof_data = {
         "notes": "Completed test harness with 100% assertions passing.",

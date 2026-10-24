@@ -40,6 +40,9 @@ class Task(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+    # Relationships
+    subtasks = db.relationship("Subtask", back_populates="task", cascade="all, delete-orphan", order_by="Subtask.order_index", lazy=True)
+
     __table_args__ = (
         db.Index("idx_team_status", "team_id", "status"),
         db.Index("idx_assignee_duedate", "assigned_to_id", "due_date"),
@@ -97,6 +100,12 @@ class Task(db.Model):
         effective_status = self.status or ("Completed" if self.completed else "Pending")
         computed_status = "Overdue" if self.is_overdue else effective_status
 
+        # Subtasks metrics calculation
+        subtasks_list = [s.to_dict() for s in self.subtasks] if hasattr(self, "subtasks") and self.subtasks else []
+        subtasks_count = len(subtasks_list)
+        subtasks_completed_count = sum(1 for s in subtasks_list if s["is_completed"])
+        subtask_progress_pct = round((subtasks_completed_count / subtasks_count * 100)) if subtasks_count > 0 else 0
+
         return {
             "id": self.id,
             "title": self.title,
@@ -129,6 +138,10 @@ class Task(db.Model):
             "completed": bool(self.completed or effective_status == "Completed"),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "order_index": self.order_index or 0,
+            "subtasks": subtasks_list,
+            "subtasks_count": subtasks_count,
+            "subtasks_completed_count": subtasks_completed_count,
+            "subtask_progress_pct": subtask_progress_pct,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }

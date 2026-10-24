@@ -14,6 +14,7 @@
 - **Task Duplication**: One-click cloning of repetitive tasks.
 - **Bulk Actions**: Select multiple tasks with checkboxes to bulk-complete or bulk-delete.
 - **Dual View Modes**: Switch between **List View** and **Grid / Kanban Cards View**.
+- **Subtasks & Acceptance Checklist**: Granular deliverable breakdown with live completion progress bars, checkoff animations, audit logging, and one-click AI architectural decomposition.
 
 ### 2. Rich Productivity Views & Navigation
 - **Collapsible Sidebar**: Sidebar with smooth transition, persisted state (`localStorage`), and responsive mobile drawer.

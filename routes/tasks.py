@@ -960,3 +960,25 @@ def toggle_task_watch(task_id):
 def get_task_watch_status(task_id):
     """Retrieve watch status and watcher count for deliverable."""
     return get_watch_status_logic(task_id)
+
+
+# ==============================================================================
+# SUBTASKS & ACCEPTANCE CRITERIA NESTED ENDPOINTS
+# ==============================================================================
+from routes.subtasks import (
+    list_subtasks,
+    create_subtask,
+    batch_create_subtasks,
+    ai_generate_subtasks,
+    toggle_subtask,
+    update_subtask,
+    delete_subtask
+)
+
+tasks_bp.add_url_rule("/<int:task_id>/subtasks", "list_subtasks", list_subtasks, methods=["GET"])
+tasks_bp.add_url_rule("/<int:task_id>/subtasks", "create_subtask", create_subtask, methods=["POST"])
+tasks_bp.add_url_rule("/<int:task_id>/subtasks/batch", "batch_create_subtasks", batch_create_subtasks, methods=["POST"])
+tasks_bp.add_url_rule("/<int:task_id>/subtasks/ai-generate", "ai_generate_subtasks", ai_generate_subtasks, methods=["POST"])
+tasks_bp.add_url_rule("/<int:task_id>/subtasks/<int:subtask_id>/toggle", "toggle_task_subtask", toggle_subtask, methods=["PATCH", "POST"])
+tasks_bp.add_url_rule("/<int:task_id>/subtasks/<int:subtask_id>", "update_task_subtask", update_subtask, methods=["PUT"])
+tasks_bp.add_url_rule("/<int:task_id>/subtasks/<int:subtask_id>", "delete_task_subtask", delete_subtask, methods=["DELETE"])

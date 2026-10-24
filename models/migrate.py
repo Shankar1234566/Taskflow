@@ -137,7 +137,6 @@ def apply_migrations(db_path):
             cursor.execute("INSERT OR IGNORE INTO teams (name) VALUES ('Mobile Squad')")
             cursor.execute("INSERT OR IGNORE INTO teams (name) VALUES ('QA Squad')")
 
-        # Ensure first user is Admin
         # Create chat_messages table if it does not exist
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS chat_messages (
@@ -192,6 +191,30 @@ def apply_migrations(db_path):
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_leave_user_team ON leave_requests(user_id, team_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_leave_dates ON leave_requests(start_date, end_date)")
+
+        # Create subtasks table if it does not exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subtasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                is_completed BOOLEAN DEFAULT 0 NOT NULL,
+                completed_at DATETIME,
+                order_index INTEGER DEFAULT 0 NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_subtask_task ON subtasks(task_id)")
+
+        # Verify subtask columns
+        cursor.execute("PRAGMA table_info(subtasks)")
+        subtask_cols = {row[1] for row in cursor.fetchall()}
+        if "completed_at" not in subtask_cols:
+            cursor.execute("ALTER TABLE subtasks ADD COLUMN completed_at DATETIME")
+        if "order_index" not in subtask_cols:
+            cursor.execute("ALTER TABLE subtasks ADD COLUMN order_index INTEGER DEFAULT 0 NOT NULL")
 
         conn.commit()
     except Exception as e:

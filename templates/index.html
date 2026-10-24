@@ -940,6 +940,18 @@
         <div class="review-notes-box" id="review-submission-notes"></div>
       </div>
 
+            <!-- Subtasks Acceptance Review Banner -->
+      <div id="review-subtask-status-card" style="display: none; padding: 10px 12px; background: var(--color-canvas-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <strong style="font-size: 12px; text-transform: uppercase; color: var(--color-text-secondary);">Subtasks & Acceptance Criteria</strong>
+          <span class="badge" id="review-subtask-badge">0 / 0 Done</span>
+        </div>
+        <div class="subtask-progress-bar-wrap" style="height: 6px;">
+          <div class="subtask-progress-bar-fill" id="review-subtask-bar-fill" style="width: 0%;"></div>
+        </div>
+        <p id="review-subtask-warning" style="display: none; margin: 6px 0 0; font-size: 12px; color: #DC2626; font-weight: 600;">⚠️ Notice: Some acceptance criteria remain incomplete.</p>
+      </div>
+
       <!-- Feedback textarea -->
       <label>Reviewer Feedback / Revision Instructions
         <textarea id="review-feedback-input" rows="3" placeholder="Provide actionable feedback or reasons if requesting changes..."></textarea>
@@ -974,6 +986,38 @@
         <div><strong>Assignee</strong> <span id="detail-assignee"></span></div>
         <div><strong>Squad</strong> <span id="detail-team"></span></div>
       </div>
+
+      <!-- Acceptance Criteria & Subtasks Checklist Section -->
+      <div class="subtask-section" id="modal-subtask-section" style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--color-border);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <strong style="font-size: 14px; color: var(--color-text-primary);">Acceptance Checklist & Subtasks</strong>
+            <span class="badge" id="subtask-progress-badge" style="font-size: 11px;">0 / 0 (0%)</span>
+          </div>
+          <button type="button" class="btn btn-sm" id="btn-ai-decompose" style="font-size: 12px; padding: 3px 8px;" title="Automatically decompose deliverable into architectural subtasks">
+            ✨ Generate with AI
+          </button>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="subtask-progress-bar-wrap">
+          <div class="subtask-progress-bar-fill" id="subtask-progress-fill" style="width: 0%;"></div>
+        </div>
+
+        <!-- List container -->
+        <ul class="subtask-items-list" id="subtask-items-list" style="list-style: none; padding: 0; margin: 12px 0 10px; display: grid; gap: 8px;">
+          <!-- Dynamically populated by tasks.js -->
+        </ul>
+
+        <!-- Quick Add Subtask Input -->
+        <div class="subtask-add-row" style="display: flex; gap: 8px; margin-top: 8px;">
+          <input type="text" id="input-new-subtask" placeholder="Add an acceptance criteria or subtask (press Enter)..." class="subtask-input" autocomplete="off" style="flex: 1; font-size: 13px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-primary);">
+          <button type="button" class="btn btn-sm primary" id="btn-add-subtask" style="white-space: nowrap;">
+            + Add
+          </button>
+        </div>
+      </div>
+
       <div class="det-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
         <button class="btn btn-watch" id="btn-watch-task" onclick="TaskflowNotifications.toggleWatch(this.getAttribute('data-task-id'))" title="Subscribe to deliverable updates">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

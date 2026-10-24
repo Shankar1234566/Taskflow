@@ -22,3 +22,4 @@ from .activity import ActivityLog  # noqa: E402
 from .notification import Notification, TaskWatcher  # noqa: E402
 from .chat import ChatMessage  # noqa: E402
 from .attendance import AttendanceRecord, LeaveRequest  # noqa: E402
+from .subtask import Subtask  # noqa: E402

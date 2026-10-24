@@ -540,3 +540,58 @@
   text-align: center;
   color: var(--color-text-muted);
 }
+
+
+/* ==========================================================================
+   SUBTASK & ACCEPTANCE CHECKLIST PROGRESS CHIP
+   ========================================================================== */
+.subtask-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  margin-top: 4px;
+  width: fit-content;
+  transition: background var(--duration-fast), border-color var(--duration-fast), transform var(--duration-fast);
+}
+
+.subtask-progress-chip:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-brand-border);
+  transform: translateY(-1px);
+}
+
+.subtask-progress-chip.all-completed {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success-fg);
+}
+
+.subtask-chip-mini-bar {
+  display: inline-block;
+  width: 28px;
+  height: 5px;
+  background: var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.subtask-chip-mini-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-brand-primary);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.subtask-progress-chip.all-completed .subtask-chip-mini-fill {
+  background: var(--color-success-solid);
+}

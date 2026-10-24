@@ -85,6 +85,65 @@ Toggles starred/important status for fast retrieval.
 ### `DELETE /api/tasks/<id>`
 Deletes a task. Restricted to creators, assignees, leads, and administrators.
 
+### Subtasks & Acceptance Criteria Endpoints
+
+#### `GET /api/tasks/<task_id>/subtasks`
+Retrieves all subtasks and computed completion percentage for the deliverable.
+**Response (200 OK)**:
+```json
+{
+  "task_id": 1,
+  "total": 3,
+  "completed": 2,
+  "progress_pct": 67,
+  "subtasks": [
+    {
+      "id": 10,
+      "task_id": 1,
+      "title": "Define REST schema",
+      "is_completed": true,
+      "completed_at": "2026-10-24T12:00:00Z",
+      "order_index": 1
+    }
+  ]
+}
+```
+
+#### `POST /api/tasks/<task_id>/subtasks`
+Creates a new checklist subtask under a deliverable.
+**Request Body**:
+```json
+{
+  "title": "Implement JWT signature validation"
+}
+```
+
+#### `POST /api/tasks/<task_id>/subtasks/batch`
+Creates multiple checklist subtasks in a single transaction.
+**Request Body**:
+```json
+{
+  "subtasks": [
+    "Phase 1: Architecture Specification",
+    "Phase 2: Database Migration",
+    "Phase 3: Core Implementation"
+  ]
+}
+```
+
+#### `POST /api/tasks/<task_id>/subtasks/ai-generate`
+Automatically generates 5-phase architectural subtasks tailored to the deliverable's category and title.
+
+#### `PATCH /api/subtasks/<subtask_id>/toggle`
+Toggles subtask completion state (`is_completed`) and records timestamp & activity logs.
+
+#### `PUT /api/subtasks/<subtask_id>`
+Updates subtask title or order index.
+
+#### `DELETE /api/subtasks/<subtask_id>`
+Permanently deletes a subtask and updates parent deliverable metrics.
+
+
 ---
 
 ## 3. Dashboard & Productivity Analytics

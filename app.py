@@ -24,6 +24,7 @@ def create_app(config_class=Config):
     from routes.notifications import notifications_bp
     from routes.chat_sockets import chat_bp, socketio
     from routes.attendance import attendance_bp, leaves_bp
+    from routes.subtasks import subtasks_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(tasks_bp, url_prefix="/api/tasks")
@@ -36,6 +37,7 @@ def create_app(config_class=Config):
     app.register_blueprint(chat_bp, url_prefix="/api/chat")
     app.register_blueprint(attendance_bp, url_prefix="/api/attendance")
     app.register_blueprint(leaves_bp, url_prefix="/api/leaves")
+    app.register_blueprint(subtasks_bp, url_prefix="/api/subtasks")
 
     # Initialize Flask-SocketIO
     socketio.init_app(app)

@@ -311,6 +311,12 @@ const TaskflowTasks = {
               ${isOverdue && !isCompleted ? '<span class="badge-blocked">⚠️ Blocked</span>' : ''}
             </div>
             ${task.description ? `<p class="task-desc-text" data-truncate-inspect>${this.escapeHtml(task.description)}</p>` : ''}
+            ${task.subtasks_count > 0 ? `
+              <span class="subtask-progress-chip ${task.subtask_progress_pct === 100 ? 'all-completed' : ''}" onclick="TaskflowTasks.viewTaskDetail(${task.id})" title="${task.subtasks_completed_count} of ${task.subtasks_count} acceptance criteria completed (${task.subtask_progress_pct}%)">
+                <span>☑ ${task.subtasks_completed_count}/${task.subtasks_count}</span>
+                <span class="subtask-chip-mini-bar"><span class="subtask-chip-mini-fill" style="width: ${task.subtask_progress_pct}%;"></span></span>
+              </span>
+            ` : ''}
             ${task.git_repo_link ? `<a href="${task.git_repo_link}" target="_blank" rel="noopener" class="git-link-chip" style="margin-top: 4px; padding: 2px 8px; font-size: 11px;">Git PR</a>` : ''}
           </div>
         </td>
@@ -554,6 +560,37 @@ const TaskflowTasks = {
     if (btnReject) {
       btnReject.addEventListener('click', () => this.handleReviewAction('reject'));
     }
+    // Bind Subtask quick-add input and AI generate button
+    const inputNewSubtask = document.getElementById('input-new-subtask');
+    const btnAddSubtask = document.getElementById('btn-add-subtask');
+    const btnAiDecompose = document.getElementById('btn-ai-decompose');
+
+    if (inputNewSubtask) {
+      inputNewSubtask.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (this.activeDetailTaskId) {
+            this.addSubtask(this.activeDetailTaskId);
+          }
+        }
+      });
+    }
+
+    if (btnAddSubtask) {
+      btnAddSubtask.addEventListener('click', () => {
+        if (this.activeDetailTaskId) {
+          this.addSubtask(this.activeDetailTaskId);
+        }
+      });
+    }
+
+    if (btnAiDecompose) {
+      btnAiDecompose.addEventListener('click', () => {
+        if (this.activeDetailTaskId) {
+          this.generateAiSubtasks(this.activeDetailTaskId);
+        }
+      });
+    }
   },
 
   async populateAssigneeDropdown() {
@@ -630,6 +667,25 @@ const TaskflowTasks = {
       notesEl.textContent = task.submission_notes || 'No implementation notes provided.';
     }
 
+    // Subtask review checklist status
+    const subtaskCard = document.getElementById('review-subtask-status-card');
+    const subtaskBadge = document.getElementById('review-subtask-badge');
+    const subtaskFill = document.getElementById('review-subtask-bar-fill');
+    const subtaskWarning = document.getElementById('review-subtask-warning');
+
+    if (subtaskCard) {
+      if (task.subtasks_count > 0) {
+        subtaskCard.style.display = 'block';
+        if (subtaskBadge) subtaskBadge.textContent = `${task.subtasks_completed_count} / ${task.subtasks_count} Done`;
+        if (subtaskFill) subtaskFill.style.width = `${task.subtask_progress_pct}%`;
+        if (subtaskWarning) {
+          subtaskWarning.style.display = task.subtasks_completed_count < task.subtasks_count ? 'block' : 'none';
+        }
+      } else {
+        subtaskCard.style.display = 'none';
+      }
+    }
+
     // Clear feedback input
     const feedbackInput = document.getElementById('review-feedback-input');
     if (feedbackInput) feedbackInput.value = '';
@@ -680,6 +736,9 @@ const TaskflowTasks = {
     if (window.TaskflowNotifications && typeof window.TaskflowNotifications.loadWatchStatus === 'function') {
       window.TaskflowNotifications.loadWatchStatus(taskId);
     }
+
+    this.activeDetailTaskId = taskId;
+    this.loadSubtasks(taskId);
 
     detailDialog.showModal();
   },
@@ -756,7 +815,204 @@ const TaskflowTasks = {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
-  }
+  },
+
+  // ============================================================================
+  // SUBTASKS & ACCEPTANCE CRITERIA METHODS
+  // ============================================================================
+  activeDetailTaskId: null,
+
+  async loadSubtasks(taskId) {
+    const listEl = document.getElementById('subtask-items-list');
+    const badgeEl = document.getElementById('subtask-progress-badge');
+    const fillEl = document.getElementById('subtask-progress-fill');
+    if (!listEl) return;
+
+    listEl.innerHTML = '<li style="color: var(--color-text-muted); font-size: 12px; padding: 6px;">Loading subtasks...</li>';
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/subtasks`);
+      if (!res.ok) {
+        listEl.innerHTML = '<li class="subtask-empty-state">Unable to load subtasks.</li>';
+        return;
+      }
+      const data = await res.json();
+      this.renderSubtasks(taskId, data);
+    } catch (err) {
+      console.error('Error loading subtasks:', err);
+      listEl.innerHTML = '<li class="subtask-empty-state">Failed to load subtasks.</li>';
+    }
+  },
+
+  renderSubtasks(taskId, data) {
+    const listEl = document.getElementById('subtask-items-list');
+    const badgeEl = document.getElementById('subtask-progress-badge');
+    const fillEl = document.getElementById('subtask-progress-fill');
+    if (!listEl) return;
+
+    const total = data.total || 0;
+    const completed = data.completed || 0;
+    const pct = data.progress_pct || 0;
+    const subtasks = data.subtasks || [];
+
+    if (badgeEl) {
+      badgeEl.textContent = `${completed} / ${total} (${pct}%)`;
+      badgeEl.className = pct === 100 && total > 0 ? 'badge green' : 'badge';
+    }
+    if (fillEl) {
+      fillEl.style.width = `${pct}%`;
+      fillEl.style.background = pct === 100 && total > 0 ? 'var(--color-success-solid)' : '';
+    }
+
+    if (subtasks.length === 0) {
+      listEl.innerHTML = `
+        <li class="subtask-empty-state">
+          No subtasks yet. Add an item below or click "Generate with AI" to decompose into architectural phases.
+        </li>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = subtasks.map(s => `
+      <li class="subtask-item" data-subtask-id="${s.id}">
+        <input type="checkbox" class="subtask-checkbox" ${s.is_completed ? 'checked' : ''}
+               onchange="TaskflowTasks.toggleSubtask(${taskId}, ${s.id})"
+               title="${s.is_completed ? 'Mark incomplete' : 'Mark completed'}">
+        <span class="subtask-title ${s.is_completed ? 'completed' : ''}" title="${this.escapeHtml(s.title)}">
+          ${this.escapeHtml(s.title)}
+        </span>
+        <button type="button" class="subtask-delete-btn" onclick="TaskflowTasks.deleteSubtask(${taskId}, ${s.id})" title="Delete subtask">
+          &times;
+        </button>
+      </li>
+    `).join('');
+  },
+
+  async toggleSubtask(taskId, subtaskId) {
+    try {
+      const res = await fetch(`/api/subtasks/${subtaskId}/toggle`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to update subtask.');
+        return;
+      }
+      const data = await res.json();
+
+      const task = this.allTasks.find(t => t.id === taskId);
+      if (task && data.task_progress) {
+        task.subtasks_count = data.task_progress.total;
+        task.subtasks_completed_count = data.task_progress.completed;
+        task.subtask_progress_pct = data.task_progress.progress_pct;
+        this.applyFilters();
+      }
+
+      await this.loadSubtasks(taskId);
+    } catch (err) {
+      console.error('Error toggling subtask:', err);
+    }
+  },
+
+  async addSubtask(taskId) {
+    const inputEl = document.getElementById('input-new-subtask');
+    if (!inputEl) return;
+    const title = inputEl.value.trim();
+    if (!title) return;
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/subtasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title })
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to add subtask.');
+        return;
+      }
+      inputEl.value = '';
+      const data = await res.json();
+
+      const task = this.allTasks.find(t => t.id === taskId);
+      if (task && data.task_progress) {
+        task.subtasks_count = data.task_progress.total;
+        task.subtasks_completed_count = data.task_progress.completed;
+        task.subtask_progress_pct = data.task_progress.progress_pct;
+        this.applyFilters();
+      }
+
+      await this.loadSubtasks(taskId);
+    } catch (err) {
+      console.error('Error adding subtask:', err);
+    }
+  },
+
+  async deleteSubtask(taskId, subtaskId) {
+    try {
+      const res = await fetch(`/api/subtasks/${subtaskId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to delete subtask.');
+        return;
+      }
+      const data = await res.json();
+
+      const task = this.allTasks.find(t => t.id === taskId);
+      if (task && data.task_progress) {
+        task.subtasks_count = data.task_progress.total;
+        task.subtasks_completed_count = data.task_progress.completed;
+        task.subtask_progress_pct = data.task_progress.progress_pct;
+        this.applyFilters();
+      }
+
+      await this.loadSubtasks(taskId);
+    } catch (err) {
+      console.error('Error deleting subtask:', err);
+    }
+  },
+
+  async generateAiSubtasks(taskId) {
+    const btn = document.getElementById('btn-ai-decompose');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+    }
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/subtasks/ai-generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to generate architectural subtasks.');
+        return;
+      }
+      const data = await res.json();
+
+      const task = this.allTasks.find(t => t.id === taskId);
+      if (task && data.task_progress) {
+        task.subtasks_count = data.task_progress.total;
+        task.subtasks_completed_count = data.task_progress.completed;
+        task.subtask_progress_pct = data.task_progress.progress_pct;
+        this.applyFilters();
+      }
+
+      await this.loadSubtasks(taskId);
+    } catch (err) {
+      console.error('Error generating AI subtasks:', err);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '✨ Generate with AI';
+      }
+    }
+  },
+
 };
 
 window.TaskflowTasks = TaskflowTasks;
